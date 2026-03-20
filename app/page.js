@@ -2,761 +2,391 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-/* ═══════════════════════════════════════════════════════════
-   CONSTANTS
-═══════════════════════════════════════════════════════════ */
-const GAME_SECS   = 60
-const ITEM_BASE   = 76   // px — big enough for 4-year-old fingers
-const SPAWN_SLOW  = 1400  // ms between spawns (start)
-const SPAWN_FAST  = 550   // ms between spawns (end)
-const SPEED_SLOW  = 1.6  // px per frame (start)
-const SPEED_FAST  = 4.0  // px per frame (end)
+/* ═══════════════════════════════════════════════════════
+   IMAGES — official r2.kpopdemon.com CDN
+═══════════════════════════════════════════════════════ */
+const IMG = {
+  rumi: {
+    profile:     'https://r2.kpopdemon.com/gallery/huntrix/rumi/rumi-profile.jpg',
+    performance: 'https://r2.kpopdemon.com/gallery/huntrix/rumi/rumi-performance.jpg',
+    demon:       'https://r2.kpopdemon.com/gallery/huntrix/rumi/rumi-demon-form.jpg',
+    roof:        'https://r2.kpopdemon.com/gallery/huntrix/rumi/rumi-on-roof.jpg',
+    sword:       'https://r2.kpopdemon.com/gallery/huntrix/rumi/rumi-holding-saingeom.jpg',
+  },
+  mira: {
+    profile:     'https://r2.kpopdemon.com/gallery/huntrix/mira/mira-profile.jpg',
+    dance:       'https://r2.kpopdemon.com/gallery/huntrix/mira/mira-dance.jpg',
+    weapon:      'https://r2.kpopdemon.com/gallery/huntrix/mira/mira-holding-woldo.jpg',
+    stool:       'https://r2.kpopdemon.com/gallery/huntrix/mira/mira-dancing-on-stool.jpg',
+  },
+  zoey: {
+    profile:     'https://r2.kpopdemon.com/gallery/huntrix/zoey/zoey-profile.jpg',
+    performance: 'https://r2.kpopdemon.com/gallery/huntrix/zoey/zoey-performance.jpg',
+    stage:       'https://r2.kpopdemon.com/gallery/huntrix/zoey/zoey-singing-on-stage.jpg',
+    closeup:     'https://r2.kpopdemon.com/gallery/huntrix/zoey/zoey-face-close-up.jpg',
+    determined:  'https://r2.kpopdemon.com/gallery/huntrix/zoey/zoey-looks-forward-with-determined-look.jpg',
+  },
+}
 
+/* ═══════════════════════════════════════════════════════
+   CHARACTER DATA
+═══════════════════════════════════════════════════════ */
 const CHARS = [
   {
-    id: 'rumi',
-    name: 'ルミ',
-    nameEn: 'RUMI',
-    role: 'リーダー',
-    emoji: '👑',
-    color: '#C084FC',
-    dark: '#6D28D9',
-    light: '#F3E8FF',
-    bg: 'linear-gradient(160deg, #0f0720 0%, #2a0855 55%, #5b21b6 100%)',
-    desc: 'つよくてやさしい\nリーダー！',
-    bgAccents: ['👑', '✦', '✦', '💜', '✦'],
+    id: 'rumi', name: 'ルミ', nameEn: 'RUMI', role: 'リーダー', emoji: '👑',
+    color: '#C084FC', dark: '#6D28D9', light: '#F3E8FF',
+    bg: 'linear-gradient(160deg,#0f0720 0%,#2a0855 55%,#5b21b6 100%)',
+    img: IMG.rumi, desc: 'つよくてやさしいリーダー！',
   },
   {
-    id: 'mira',
-    name: 'ミラ',
-    nameEn: 'MIRA',
-    role: 'ダンサー',
-    emoji: '🔥',
-    color: '#FB7185',
-    dark: '#BE123C',
-    light: '#FFF1F2',
-    bg: 'linear-gradient(160deg, #1c0507 0%, #4c0519 55%, #9f1239 100%)',
-    desc: 'おどりのてんさい！',
-    bgAccents: ['🔥', '♪', '♫', '❤️', '♪'],
+    id: 'mira', name: 'ミラ', nameEn: 'MIRA', role: 'ダンサー', emoji: '🔥',
+    color: '#FB7185', dark: '#BE123C', light: '#FFF1F2',
+    bg: 'linear-gradient(160deg,#1c0507 0%,#4c0519 55%,#9f1239 100%)',
+    img: IMG.mira, desc: 'おどりのてんさいダンサー！',
   },
   {
-    id: 'zoey',
-    name: 'ゾーイ',
-    nameEn: 'ZOEY',
-    role: 'ラッパー',
-    emoji: '🎤',
-    color: '#38BDF8',
-    dark: '#0369A1',
-    light: '#E0F2FE',
-    bg: 'linear-gradient(160deg, #020c1a 0%, #0c2d4c 55%, #075985 100%)',
-    desc: 'クールでかわいい\nラッパー！',
-    bgAccents: ['🎤', '💎', '✦', '💙', '💎'],
+    id: 'zoey', name: 'ゾーイ', nameEn: 'ZOEY', role: 'ラッパー', emoji: '🎤',
+    color: '#38BDF8', dark: '#0369A1', light: '#E0F2FE',
+    bg: 'linear-gradient(160deg,#020c1a 0%,#0c2d4c 55%,#075985 100%)',
+    img: IMG.zoey, desc: 'クールでかわいいラッパー！',
   },
+]
+
+/* ═══════════════════════════════════════════════════════
+   GAME CATALOGUE
+═══════════════════════════════════════════════════════ */
+const GAMES = [
+  { id: 'starCatch',   label: 'スターキャッチ', emoji: '⭐', desc: '落ちてくる星をタップ！' },
+  { id: 'memoryCards', label: 'メモリーカード', emoji: '🃏', desc: 'おなじ写真をさがそう！' },
+  { id: 'bubblePop',   label: 'バブルポップ',   emoji: '🫧', desc: 'うかぶバブルをはじこう！' },
+  { id: 'hideSeek',    label: 'かくれんぼ',     emoji: '👀', desc: 'でてきたらすぐタップ！' },
+  { id: 'rhythmTap',   label: 'リズムタップ',   emoji: '🎵', desc: 'おんぷがきたらタップ！' },
+  { id: 'puzzle',      label: 'パズル',         emoji: '🧩', desc: 'しゃしんをあわせよう！' },
 ]
 
 const DROP_ITEMS = [
-  { emoji: '⭐', pts: 10, glow: '#FFD700' },
-  { emoji: '💜', pts: 10, glow: '#C084FC' },
-  { emoji: '❤️', pts: 10, glow: '#FB7185' },
-  { emoji: '💙', pts: 10, glow: '#38BDF8' },
-  { emoji: '🌟', pts: 15, glow: '#FFD700' },
-  { emoji: '💫', pts: 15, glow: '#F0ABFC' },
-  { emoji: '✨', pts: 10, glow: '#E0F2FE' },
-  { emoji: '🎵', pts: 10, glow: '#A78BFA' },
-  { emoji: '🎶', pts: 15, glow: '#818CF8' },
-  { emoji: '💎', pts: 20, glow: '#93C5FD' },
-  { emoji: '🌸', pts: 10, glow: '#FBB6CE' },
-  { emoji: '🦋', pts: 20, glow: '#C4B5FD' },
+  { emoji:'⭐',pts:10,glow:'#FFD700' }, { emoji:'💜',pts:10,glow:'#C084FC' },
+  { emoji:'❤️',pts:10,glow:'#FB7185' }, { emoji:'💙',pts:10,glow:'#38BDF8' },
+  { emoji:'🌟',pts:15,glow:'#FFD700' }, { emoji:'💫',pts:15,glow:'#F0ABFC' },
+  { emoji:'✨',pts:10,glow:'#E0F2FE' }, { emoji:'🎵',pts:10,glow:'#A78BFA' },
+  { emoji:'💎',pts:20,glow:'#93C5FD' }, { emoji:'🌸',pts:10,glow:'#FBB6CE' },
 ]
 const SPECIAL_ITEMS = [
-  { emoji: '🌈', pts: 50, glow: '#FFD700' },
-  { emoji: '🏆', pts: 50, glow: '#FFD700' },
-  { emoji: '🎊', pts: 40, glow: '#FB923C' },
-  { emoji: '👑', pts: 40, glow: '#FFD700' },
+  { emoji:'🌈',pts:50,glow:'#FFD700' }, { emoji:'🏆',pts:50,glow:'#FFD700' },
+  { emoji:'🎊',pts:40,glow:'#FB923C' },
 ]
 
-/* ═══════════════════════════════════════════════════════════
-   AUDIO ENGINE
-═══════════════════════════════════════════════════════════ */
-function makeAudio() {
-  let ctx = null
-  let master = null
-  let running = false
-  let schedTimer = null
-  let nextBeatTime = 0
-  let beatCount = 0
+/* ═══════════════════════════════════════════════════════
+   UTILITIES
+═══════════════════════════════════════════════════════ */
+function shuffle(arr) {
+  const a = [...arr]
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]]
+  }
+  return a
+}
 
-  // K-pop melody: C major pentatonic, 16 quarter notes
-  const MELODY = [
-    659.25, 783.99, 880,    783.99,
-    659.25, 587.33, 523.25, 659.25,
-    783.99, 880,    1046.5, 880,
-    783.99, 659.25, 523.25, 0,
-  ]
+/* ═══════════════════════════════════════════════════════
+   AUDIO ENGINE
+═══════════════════════════════════════════════════════ */
+function makeAudio() {
+  let ctx = null, master = null, running = false
+  let schedTimer = null, nextBeat = 0, beatIdx = 0
+  const MELODY = [659.25,783.99,880,783.99,659.25,587.33,523.25,659.25,783.99,880,1046.5,880,783.99,659.25,523.25,0]
 
   function init() {
     if (ctx) return
     ctx = new (window.AudioContext || window.webkitAudioContext)()
-    master = ctx.createGain()
-    master.gain.value = 0.38
-    master.connect(ctx.destination)
+    master = ctx.createGain(); master.gain.value = 0.38; master.connect(ctx.destination)
   }
-
   function kick(t) {
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.connect(g); g.connect(master)
-    o.frequency.setValueAtTime(125, t)
-    o.frequency.exponentialRampToValueAtTime(36, t + 0.18)
-    g.gain.setValueAtTime(0.95, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.32)
-    o.start(t); o.stop(t + 0.32)
+    const o=ctx.createOscillator(),g=ctx.createGain()
+    o.connect(g);g.connect(master)
+    o.frequency.setValueAtTime(125,t);o.frequency.exponentialRampToValueAtTime(36,t+.18)
+    g.gain.setValueAtTime(.95,t);g.gain.exponentialRampToValueAtTime(.001,t+.32)
+    o.start(t);o.stop(t+.32)
   }
-
   function snare(t) {
-    const sz = Math.ceil(ctx.sampleRate * 0.16)
-    const buf = ctx.createBuffer(1, sz, ctx.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < sz; i++) d[i] = (Math.random() * 2 - 1) * 0.26
-    const src = ctx.createBufferSource()
-    src.buffer = buf
-    const g = ctx.createGain()
-    const f = ctx.createBiquadFilter()
-    f.type = 'highpass'; f.frequency.value = 1400
-    src.connect(f); f.connect(g); g.connect(master)
-    g.gain.setValueAtTime(0.62, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.16)
-    src.start(t); src.stop(t + 0.16)
+    const sz=Math.ceil(ctx.sampleRate*.16),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0)
+    for(let i=0;i<sz;i++)d[i]=(Math.random()*2-1)*.26
+    const s=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter()
+    f.type='highpass';f.frequency.value=1400;s.buffer=buf
+    s.connect(f);f.connect(g);g.connect(master)
+    g.gain.setValueAtTime(.62,t);g.gain.exponentialRampToValueAtTime(.001,t+.16)
+    s.start(t);s.stop(t+.16)
   }
-
-  function hat(t, vol = 0.16) {
-    const sz = Math.ceil(ctx.sampleRate * 0.048)
-    const buf = ctx.createBuffer(1, sz, ctx.sampleRate)
-    const d = buf.getChannelData(0)
-    for (let i = 0; i < sz; i++) d[i] = Math.random() * 2 - 1
-    const src = ctx.createBufferSource()
-    src.buffer = buf
-    const g = ctx.createGain()
-    const f = ctx.createBiquadFilter()
-    f.type = 'highpass'; f.frequency.value = 9000
-    src.connect(f); f.connect(g); g.connect(master)
-    g.gain.setValueAtTime(vol, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.048)
-    src.start(t); src.stop(t + 0.048)
+  function hat(t) {
+    const sz=Math.ceil(ctx.sampleRate*.048),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0)
+    for(let i=0;i<sz;i++)d[i]=Math.random()*2-1
+    const s=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter()
+    f.type='highpass';f.frequency.value=9000;s.buffer=buf
+    s.connect(f);f.connect(g);g.connect(master)
+    g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.048)
+    s.start(t);s.stop(t+.048)
   }
-
-  function bass(t, freq) {
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.type = 'triangle'
-    o.connect(g); g.connect(master)
-    o.frequency.value = freq / 2
-    g.gain.setValueAtTime(0.18, t)
-    g.gain.exponentialRampToValueAtTime(0.001, t + 0.22)
-    o.start(t); o.stop(t + 0.22)
+  function tone(t,freq,dur,vol=.2) {
+    if(!freq)return
+    const o=ctx.createOscillator(),g=ctx.createGain()
+    o.type='sine';o.connect(g);g.connect(master)
+    o.frequency.value=freq
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+.04)
+    g.gain.setValueAtTime(vol,t+dur*.82);g.gain.linearRampToValueAtTime(.001,t+dur)
+    o.start(t);o.stop(t+dur)
   }
-
-  function melNote(t, freq, dur) {
-    if (!freq) return
-    const o = ctx.createOscillator()
-    const g = ctx.createGain()
-    o.type = 'sine'
-    o.connect(g); g.connect(master)
-    o.frequency.value = freq
-    g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(0.22, t + 0.04)
-    g.gain.setValueAtTime(0.22, t + dur * 0.82)
-    g.gain.linearRampToValueAtTime(0.001, t + dur)
-    o.start(t); o.stop(t + dur)
-  }
-
-  // Beat pattern per 16th note step (0-15 = one bar)
-  const PATTERN = [
-    ['K', 'H'], ['H'], ['H'],       ['H'],
-    ['S', 'H'], ['H'], ['H'],       ['H', 'K'],
-    ['K', 'H'], ['H'], ['H'],       ['H'],
-    ['S', 'H'], ['H'], ['K', 'H'],  ['H'],
-  ]
-
-  const BASS_PAT = [523.25, 0, 0, 0, 392, 0, 0, 0, 440, 0, 0, 0, 523.25, 0, 0, 0]
-
+  const PAT=[['K','H'],['H'],['H'],['H'],['S','H'],['H'],['H'],['H'],['K','H'],['H'],['H'],['H'],['S','H'],['H'],['K','H'],['H']]
   function schedule() {
-    if (!ctx || !running) return
-    const sixteenth = (60 / 128) / 4
-    const quarter   = sixteenth * 4
-
-    while (nextBeatTime < ctx.currentTime + 0.1) {
-      const step = beatCount % 16
-
-      PATTERN[step].forEach(x => {
-        if (x === 'K') kick(nextBeatTime)
-        else if (x === 'S') snare(nextBeatTime)
-        else hat(nextBeatTime)
-      })
-
-      if (BASS_PAT[step]) bass(nextBeatTime, BASS_PAT[step])
-
-      if (beatCount % 4 === 0) {
-        const melIdx = (Math.floor(beatCount / 4)) % MELODY.length
-        melNote(nextBeatTime, MELODY[melIdx], quarter * 0.88)
-      }
-
-      beatCount++
-      nextBeatTime += sixteenth
+    if(!ctx||!running)return
+    const s16=(60/128)/4,q=s16*4
+    while(nextBeat<ctx.currentTime+.1){
+      PAT[beatIdx%16].forEach(x=>{if(x==='K')kick(nextBeat);else if(x==='S')snare(nextBeat);else hat(nextBeat)})
+      if(beatIdx%4===0)tone(nextBeat,MELODY[Math.floor(beatIdx/4)%MELODY.length],q*.88)
+      beatIdx++;nextBeat+=s16
     }
   }
-
+  function sfx(freqs,durs,vols) {
+    if(!ctx||ctx.state!=='running')return
+    const t=ctx.currentTime
+    freqs.forEach((f,i)=>tone(t+(durs[i]||0),f,.18+(durs[i]||0),vols?vols[i]:.4))
+  }
   return {
-    start() {
-      init()
-      if (ctx.state === 'suspended') ctx.resume()
-      if (running) return
-      running = true
-      beatCount = 0
-      nextBeatTime = ctx.currentTime + 0.05
-      schedTimer = setInterval(() => { if (running) schedule() }, 20)
-    },
-
-    stop() {
-      running = false
-      if (schedTimer) { clearInterval(schedTimer); schedTimer = null }
-      if (ctx) ctx.suspend()
-    },
-
-    sfxCatch() {
-      if (!ctx || ctx.state !== 'running') return
-      const t = ctx.currentTime
-      const o = ctx.createOscillator()
-      const g = ctx.createGain()
-      o.type = 'sine'; o.connect(g); g.connect(master)
-      o.frequency.setValueAtTime(880, t)
-      o.frequency.exponentialRampToValueAtTime(1760, t + 0.12)
-      g.gain.setValueAtTime(0.45, t)
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.2)
-      o.start(t); o.stop(t + 0.2)
-    },
-
-    sfxCombo() {
-      if (!ctx || ctx.state !== 'running') return
-      const t = ctx.currentTime
-      const freqs = [880, 1046.5, 1318.5]
-      freqs.forEach((f, i) => {
-        const o = ctx.createOscillator()
-        const g = ctx.createGain()
-        o.type = 'sine'; o.connect(g); g.connect(master)
-        o.frequency.value = f
-        g.gain.setValueAtTime(0.38, t + i * 0.09)
-        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.09 + 0.18)
-        o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.18)
-      })
-    },
-
-    sfxSpecial() {
-      if (!ctx || ctx.state !== 'running') return
-      const t = ctx.currentTime
-      const freqs = [523.25, 659.25, 783.99, 1046.5]
-      freqs.forEach((f, i) => {
-        const o = ctx.createOscillator()
-        const g = ctx.createGain()
-        o.type = 'sine'; o.connect(g); g.connect(master)
-        o.frequency.value = f
-        g.gain.setValueAtTime(0.35, t + i * 0.07)
-        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.07 + 0.25)
-        o.start(t + i * 0.07); o.stop(t + i * 0.07 + 0.25)
-      })
-    },
-
-    sfxGameOver() {
-      if (!ctx) return
-      if (ctx.state === 'suspended') ctx.resume()
-      const t = ctx.currentTime + 0.1
-      const freqs = [523.25, 659.25, 783.99, 1046.5]
-      freqs.forEach((f, i) => {
-        const o = ctx.createOscillator()
-        const g = ctx.createGain()
-        o.type = 'sine'; o.connect(g); g.connect(master)
-        o.frequency.value = f
-        g.gain.setValueAtTime(0.3, t + i * 0.18)
-        g.gain.exponentialRampToValueAtTime(0.001, t + i * 0.18 + 0.4)
-        o.start(t + i * 0.18); o.stop(t + i * 0.18 + 0.4)
-      })
-    },
+    start(){init();if(ctx.state==='suspended')ctx.resume();if(running)return;running=true;beatIdx=0;nextBeat=ctx.currentTime+.05;schedTimer=setInterval(()=>{if(running)schedule()},20)},
+    stop(){running=false;clearInterval(schedTimer);schedTimer=null;ctx?.suspend()},
+    resume(){ctx?.state==='suspended'&&ctx.resume()},
+    sfxCatch(){ sfx([880,1760],[0,.1]) },
+    sfxCombo(){ sfx([880,1046.5,1318.5],[0,.09,.18]) },
+    sfxSpecial(){ sfx([523.25,659.25,783.99,1046.5],[0,.07,.14,.21]) },
+    sfxGameOver(){ if(!ctx)return;if(ctx.state==='suspended')ctx.resume();const t=ctx.currentTime+.1;[[523.25,0],[659.25,.18],[783.99,.36],[1046.5,.54]].forEach(([f,d])=>tone(t+d,f,.4,.3)) },
+    sfxCardFlip(){ sfx([600,800],[0,.05],[.25,.2]) },
+    sfxCardMatch(){ sfx([880,1046.5,1318.5,1760],[0,.06,.12,.18],[.35,.35,.35,.35]) },
+    sfxBubble(){ sfx([1200,800],[0,.08],[.3,.25]) },
+    sfxAppear(){ sfx([660,880],[0,.08]) },
+    sfxHide(){ sfx([440,330],[0,.08],[.2,.2]) },
+    sfxRhythmGood(){ sfx([880,1046.5],[0,.08]) },
+    sfxRhythmMiss(){ sfx([220,180],[0,.12],[.2,.2]) },
+    sfxPieceMove(){ sfx([600],[0],[.3]) },
+    sfxPuzzleDone(){ sfx([523.25,659.25,783.99,880,1046.5],[0,.08,.16,.24,.32],[.35,.35,.35,.35,.4]) },
   }
 }
 
-/* ═══════════════════════════════════════════════════════════
-   SVG CHARACTERS  (viewBox 0 0 100 160)
-═══════════════════════════════════════════════════════════ */
-
-function RumiSVG({ size, animClass }) {
+/* ═══════════════════════════════════════════════════════
+   SHARED UI HELPERS
+═══════════════════════════════════════════════════════ */
+function CharImg({ src, size, style={}, className='', radius='50%' }) {
   return (
-    <svg
-      width={size}
-      height={size * 1.6}
-      viewBox="0 0 100 160"
-      className={animClass}
-      style={{ transformOrigin: 'bottom center', display: 'block' }}
-    >
-      {/* ── HAIR BACK ── */}
-      <ellipse cx="50" cy="48" rx="27" ry="31" fill="#1e1040" />
-      {/* Long hair sides */}
-      <path d="M25 54 Q15 82 17 118 Q23 113 27 92 Q29 72 27 56Z" fill="#2D1B69" />
-      <path d="M75 54 Q85 82 83 118 Q77 113 73 92 Q71 72 73 56Z" fill="#2D1B69" />
-      {/* Braid detail */}
-      <path d="M22 72 Q20 78 22 84 Q24 78 22 72Z" fill="#3b2784" opacity="0.9" />
-      <path d="M78 72 Q80 78 78 84 Q76 78 78 72Z" fill="#3b2784" opacity="0.9" />
-
-      {/* ── FACE ── */}
-      <circle cx="50" cy="46" r="24" fill="#FDBCB4" />
-
-      {/* ── BANGS ── */}
-      <path d="M27 44 Q33 21 50 19 Q67 21 73 44 Q63 29 50 28 Q37 29 27 44Z" fill="#2D1B69" />
-      <path d="M27 44 Q23 53 25 60" stroke="#2D1B69" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-      <path d="M73 44 Q77 53 75 60" stroke="#2D1B69" strokeWidth="4.5" fill="none" strokeLinecap="round" />
-
-      {/* ── CROWN ── */}
-      <path d="M35 22 L40 9 L50 17 L60 9 L65 22 L50 18Z" fill="#FFD700" />
-      <path d="M35 22 L65 22" stroke="#FFA500" strokeWidth="1.5" />
-      <circle cx="50" cy="16" r="3.5" fill="#EF4444" />
-      <circle cx="40" cy="9"  r="2.5" fill="#A855F7" />
-      <circle cx="60" cy="9"  r="2.5" fill="#A855F7" />
-      <circle cx="35" cy="22" r="2"   fill="#FFD700" />
-      <circle cx="65" cy="22" r="2"   fill="#FFD700" />
-
-      {/* ── EYES ── */}
-      <ellipse cx="41" cy="44" rx="6.5" ry="7"   fill="white" />
-      <ellipse cx="59" cy="44" rx="6.5" ry="7"   fill="white" />
-      <ellipse cx="41" cy="45" rx="4.8" ry="5.5" fill="#8B5CF6" />
-      <ellipse cx="59" cy="45" rx="4.8" ry="5.5" fill="#8B5CF6" />
-      <circle  cx="42" cy="45" r="2.8"  fill="#1a0a3c" />
-      <circle  cx="60" cy="45" r="2.8"  fill="#1a0a3c" />
-      <circle  cx="43.5" cy="43" r="1.4" fill="white" />
-      <circle  cx="61.5" cy="43" r="1.4" fill="white" />
-      {/* Eyelashes */}
-      <path d="M34 39 Q38 35 42 37" stroke="#1a0a3c" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-      <path d="M66 39 Q62 35 58 37" stroke="#1a0a3c" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-
-      {/* ── NOSE & MOUTH ── */}
-      <path d="M47 53 Q50 57 53 53" stroke="#E8A090" strokeWidth="1.3" fill="none" strokeLinecap="round" />
-      <path d="M43 60 Q50 67 57 60" stroke="#D05060" strokeWidth="2" fill="#FFB5C0" strokeLinecap="round" />
-
-      {/* ── CHEEKS ── */}
-      <circle cx="31" cy="56" r="7.5" fill="#FFB5C8" opacity="0.38" />
-      <circle cx="69" cy="56" r="7.5" fill="#FFB5C8" opacity="0.38" />
-
-      {/* ── NECK ── */}
-      <rect x="43" y="68" width="14" height="8" rx="2" fill="#FDBCB4" />
-
-      {/* ── OUTFIT: purple jacket ── */}
-      <path d="M18 78 L35 68 L50 78 L65 68 L82 78 L78 120 L22 120Z" fill="#C084FC" />
-      <path d="M40 68 L44 87 L50 78 L56 87 L60 68" fill="#9333EA" />
-      <path d="M24 96 L40 96" stroke="#E9D5FF" strokeWidth="1.6" opacity="0.6" />
-      <path d="M60 96 L76 96" stroke="#E9D5FF" strokeWidth="1.6" opacity="0.6" />
-      <text x="27" y="112" fontSize="8" fill="#FFD700" opacity="0.85">✦</text>
-      <text x="60" y="114" fontSize="6" fill="#FFD700" opacity="0.7">✦</text>
-
-      {/* ── SKIRT ── */}
-      <path d="M22 120 Q50 136 78 120 L82 152 Q50 162 18 152Z" fill="#9333EA" />
-      <path d="M30 134 Q50 142 70 134" stroke="#E9D5FF" strokeWidth="1.4" fill="none" opacity="0.5" />
-      <text x="36" y="148" fontSize="7" fill="#F0ABFC" opacity="0.75">✦</text>
-      <text x="55" y="152" fontSize="5" fill="#F0ABFC" opacity="0.65">✦</text>
-
-      {/* ── ARMS ── */}
-      <path d="M18 80 Q4 93 3 109 Q10 112 16 109 Q17 95 24 88Z" fill="#C084FC" />
-      <circle cx="4"  cy="110" r="7" fill="#FDBCB4" />
-      <path d="M82 80 Q96 93 97 109 Q90 112 84 109 Q83 95 76 88Z" fill="#C084FC" />
-      <circle cx="96" cy="110" r="7" fill="#FDBCB4" />
-
-      {/* ── LEGS & BOOTS ── */}
-      <rect x="35" y="149" width="12" height="12" rx="3" fill="#FDBCB4" />
-      <rect x="53" y="149" width="12" height="12" rx="3" fill="#FDBCB4" />
-      <rect x="32" y="156" width="19" height="7" rx="3.5" fill="#6D28D9" />
-      <rect x="50" y="156" width="19" height="7" rx="3.5" fill="#6D28D9" />
-    </svg>
+    <img
+      src={src}
+      style={{ width:size, height:size, objectFit:'cover', borderRadius:radius, display:'block', ...style }}
+      className={className}
+      draggable={false}
+      onError={e => { e.target.style.display='none' }}
+    />
   )
 }
 
-function MiraSVG({ size, animClass }) {
-  return (
-    <svg
-      width={size}
-      height={size * 1.6}
-      viewBox="0 0 100 160"
-      className={animClass}
-      style={{ transformOrigin: 'bottom center', display: 'block', animationDelay: '0.18s' }}
-    >
-      {/* ── HAIR BACK ── */}
-      <ellipse cx="50" cy="46" rx="26" ry="30" fill="#E91E8C" />
-      {/* Twin pigtail bases */}
-      <ellipse cx="14" cy="33" rx="12" ry="14" fill="#E91E8C" />
-      <ellipse cx="86" cy="33" rx="12" ry="14" fill="#E91E8C" />
-      <path d="M26 36 Q22 26 14 26 Q6 26 4 34 Q6 42 14 44 Q20 44 24 38Z" fill="#C0166A" />
-      <path d="M74 36 Q78 26 86 26 Q94 26 96 34 Q94 42 86 44 Q80 44 76 38Z" fill="#C0166A" />
-      {/* Hair ties */}
-      <circle cx="24" cy="36" r="5" fill="#FF69B4" />
-      <circle cx="76" cy="36" r="5" fill="#FF69B4" />
-      <text x="21" y="39" fontSize="5.5" fill="#FFD700" textAnchor="middle">★</text>
-      <text x="79" y="39" fontSize="5.5" fill="#FFD700" textAnchor="middle">★</text>
-
-      {/* ── FACE ── */}
-      <circle cx="50" cy="46" r="23" fill="#F5CBA7" />
-
-      {/* ── BANGS ── */}
-      <path d="M28 42 Q35 20 50 19 Q65 20 72 42 Q62 27 50 26 Q38 27 28 42Z" fill="#C0166A" />
-
-      {/* ── GLASSES ── */}
-      <circle cx="40" cy="44" r="8.5" fill="rgba(200,240,255,0.18)" stroke="#DAA520" strokeWidth="1.9" />
-      <circle cx="60" cy="44" r="8.5" fill="rgba(200,240,255,0.18)" stroke="#DAA520" strokeWidth="1.9" />
-      <path d="M48.5 44 L51.5 44" stroke="#DAA520" strokeWidth="1.7" />
-      <path d="M31.5 42 Q28 40 27 39" stroke="#DAA520" strokeWidth="1.7" fill="none" strokeLinecap="round" />
-      <path d="M68.5 42 Q72 40 73 39" stroke="#DAA520" strokeWidth="1.7" fill="none" strokeLinecap="round" />
-
-      {/* ── EYES (behind glasses) ── */}
-      <ellipse cx="40" cy="45" rx="4.5" ry="5"   fill="#6B0000" />
-      <circle  cx="41" cy="45" r="2.6"  fill="#1a0000" />
-      <circle  cx="42.5" cy="43" r="1.2" fill="white" />
-      <ellipse cx="60" cy="45" rx="4.5" ry="5"   fill="#6B0000" />
-      <circle  cx="61" cy="45" r="2.6"  fill="#1a0000" />
-      <circle  cx="62.5" cy="43" r="1.2" fill="white" />
-
-      {/* ── EYEBROWS (determined) ── */}
-      <path d="M32 36 Q40 32 47 36" stroke="#8B0000" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-      <path d="M53 36 Q60 32 68 36" stroke="#8B0000" strokeWidth="2.2" fill="none" strokeLinecap="round" />
-
-      {/* ── NOSE & MOUTH ── */}
-      <path d="M47 53 Q50 57 53 53" stroke="#C08060" strokeWidth="1.3" fill="none" />
-      <path d="M43 60 Q52 66 59 60" stroke="#C04040" strokeWidth="2"   fill="#E8A080" strokeLinecap="round" />
-
-      {/* ── CHEEKS ── */}
-      <circle cx="31" cy="57" r="7" fill="#FFB5A0" opacity="0.32" />
-      <circle cx="69" cy="57" r="7" fill="#FFB5A0" opacity="0.32" />
-
-      {/* ── NECK ── */}
-      <rect x="43" y="67" width="14" height="8" rx="2" fill="#F5CBA7" />
-
-      {/* ── OUTFIT: black top + yellow skirt ── */}
-      <path d="M20 76 L37 66 L50 76 L63 66 L80 76 L77 110 L23 110Z" fill="#1a1a2e" />
-      <path d="M39 66 L50 76 L61 66" fill="#0f0f1a" />
-      {/* WON'T MISS graphic */}
-      <path d="M26 96 L34 83 L42 96" fill="none" stroke="#1D6FA4" strokeWidth="1.6" />
-      <path d="M35 96 L44 86 L53 96" fill="none" stroke="#1D6FA4" strokeWidth="1.6" />
-      <text x="23" y="106" fontSize="4.2" fill="#E91E8C" fontWeight="bold">WON'T MISS</text>
-      {/* Choker */}
-      <rect x="43" y="65" width="14" height="3" rx="1.5" fill="#222" />
-      <circle cx="50" cy="66.5" r="1.5" fill="#C0C0C0" />
-
-      {/* ── YELLOW SKIRT ── */}
-      <path d="M23 110 Q50 123 77 110 L80 142 Q50 154 20 142Z" fill="#EAB308" />
-      <path d="M30 122 Q50 130 70 122" stroke="#FDE047" strokeWidth="1.5" fill="none" opacity="0.7" />
-      {/* Belt */}
-      <rect x="23" y="108" width="54" height="5" rx="2.5" fill="#CA8A04" />
-      <rect x="47" y="107" width="6"  height="7" rx="1"   fill="#CA8A04" />
-
-      {/* ── ARMS ── */}
-      <path d="M20 78 Q6 92 4 108 Q11 111 17 107 Q18 93 26 87Z" fill="#1a1a2e" />
-      <circle cx="5"  cy="109" r="6.5" fill="#F5CBA7" />
-      <path d="M80 78 Q94 92 96 108 Q89 111 83 107 Q82 93 74 87Z" fill="#1a1a2e" />
-      <circle cx="95" cy="109" r="6.5" fill="#F5CBA7" />
-
-      {/* ── LEGS & BOOTS ── */}
-      <rect x="35" y="139" width="12" height="12" rx="3" fill="#F5CBA7" />
-      <rect x="53" y="139" width="12" height="12" rx="3" fill="#F5CBA7" />
-      <rect x="31" y="146" width="20" height="9"  rx="4" fill="#1a1a2e" />
-      <rect x="49" y="146" width="20" height="9"  rx="4" fill="#1a1a2e" />
-    </svg>
-  )
-}
-
-function ZoeySVG({ size, animClass }) {
-  return (
-    <svg
-      width={size}
-      height={size * 1.6}
-      viewBox="0 0 100 160"
-      className={animClass}
-      style={{ transformOrigin: 'bottom center', display: 'block', animationDelay: '0.36s' }}
-    >
-      {/* ── HAIR BACK ── */}
-      <ellipse cx="50" cy="48" rx="25" ry="28" fill="#0C2E42" />
-      {/* Space buns */}
-      <circle cx="31" cy="26" r="13" fill="#0C2E42" />
-      <circle cx="69" cy="26" r="13" fill="#0C2E42" />
-      <path d="M22 26 Q31 16 40 26" stroke="#1A4D6E" strokeWidth="2.2" fill="none" />
-      <path d="M60 26 Q69 16 78 26" stroke="#1A4D6E" strokeWidth="2.2" fill="none" />
-      {/* Bun ties */}
-      <circle cx="31" cy="37" r="4"   fill="#38BDF8" />
-      <circle cx="69" cy="37" r="4"   fill="#38BDF8" />
-      <circle cx="31" cy="37" r="1.8" fill="#0284C7" />
-      <circle cx="69" cy="37" r="1.8" fill="#0284C7" />
-
-      {/* ── FACE ── */}
-      <circle cx="50" cy="48" r="23" fill="#FDBCB4" />
-
-      {/* ── MICRO BANGS ── */}
-      <path d="M28 44 Q38 29 50 27 Q62 29 72 44 Q64 33 50 32 Q36 33 28 44Z" fill="#0C2E42" />
-      <path d="M28 44 Q24 52 26 58" stroke="#0C2E42" strokeWidth="4" fill="none" strokeLinecap="round" />
-      <path d="M72 44 Q76 52 74 58" stroke="#0C2E42" strokeWidth="4" fill="none" strokeLinecap="round" />
-
-      {/* ── EYES (monolid, cute) ── */}
-      <ellipse cx="41" cy="46" rx="6"   ry="5.5" fill="white" />
-      <ellipse cx="59" cy="46" rx="6"   ry="5.5" fill="white" />
-      <ellipse cx="41" cy="47" rx="4.2" ry="4.5" fill="#6B4423" />
-      <ellipse cx="59" cy="47" rx="4.2" ry="4.5" fill="#6B4423" />
-      <circle  cx="42" cy="47" r="2.4"  fill="#1a0a00" />
-      <circle  cx="60" cy="47" r="2.4"  fill="#1a0a00" />
-      <circle  cx="43.5" cy="45" r="1.1" fill="white" />
-      <circle  cx="61.5" cy="45" r="1.1" fill="white" />
-      {/* Monolid fold */}
-      <path d="M35 43 Q41 39 47 43" stroke="#0C2E42" strokeWidth="1.1" fill="none" />
-      <path d="M53 43 Q59 39 65 43" stroke="#0C2E42" strokeWidth="1.1" fill="none" />
-
-      {/* ── NOSE & MOUTH ── */}
-      <path d="M47 56 Q50 59 53 56" stroke="#F4A0A0" strokeWidth="1.3" fill="none" />
-      <path d="M42 63 Q50 71 58 63" stroke="#E05060" strokeWidth="2"   fill="#FFB5C0" strokeLinecap="round" />
-
-      {/* ── CHEEKS ── */}
-      <circle cx="30" cy="59" r="8" fill="#FFB5C8" opacity="0.38" />
-      <circle cx="70" cy="59" r="8" fill="#FFB5C8" opacity="0.38" />
-
-      {/* ── STAR EARRINGS ── */}
-      <text x="20" y="60" fontSize="8" fill="#FFD700">★</text>
-      <text x="72" y="60" fontSize="8" fill="#FFD700">★</text>
-
-      {/* ── NECK ── */}
-      <rect x="43" y="69" width="14" height="8" rx="2" fill="#FDBCB4" />
-
-      {/* ── OUTFIT: teal jacket ── */}
-      <path d="M20 78 L37 68 L50 78 L63 68 L80 78 L76 116 L24 116Z" fill="#0E7490" />
-      <path d="M39 68 L50 78 L61 68" fill="#0284C7" />
-      <path d="M35 80 L37 80" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M63 80 L65 80" stroke="#FFD700" strokeWidth="2.5" strokeLinecap="round" />
-      {/* Lotus design */}
-      <text x="44" y="99" fontSize="9" fill="#FDA4AF" opacity="0.82">✿</text>
-      {/* Jacket zippers */}
-      <path d="M50 78 L50 112" stroke="#FFD700" strokeWidth="1" opacity="0.4" strokeDasharray="2 3" />
-
-      {/* ── DARK PARACHUTE PANTS ── */}
-      <path d="M24 116 Q50 126 76 116 L79 152 Q50 160 21 152Z" fill="#1e1b4b" />
-      {/* Geometric details */}
-      <path d="M30 130 Q37 125 44 130" stroke="#EAB308" strokeWidth="1.6" fill="none" />
-      <path d="M56 132 Q63 127 70 132" stroke="#EAB308" strokeWidth="1.6" fill="none" />
-      {/* Belt */}
-      <rect x="24" y="114" width="52" height="5" rx="2.5" fill="#312e81" />
-
-      {/* ── ARMS (left empty, right with mic) ── */}
-      <path d="M20 80 Q6 94 4 110 Q11 113 17 109 Q18 95 26 89Z" fill="#0E7490" />
-      <circle cx="5"  cy="111" r="6.5" fill="#FDBCB4" />
-      <path d="M80 80 Q94 94 96 110 Q89 113 83 109 Q82 95 74 89Z" fill="#0E7490" />
-      <circle cx="95" cy="111" r="6.5" fill="#FDBCB4" />
-      {/* Microphone */}
-      <rect  x="92"  y="113" width="5.5" height="13" rx="2"   fill="#555" />
-      <ellipse cx="94.75" cy="112" rx="4.5" ry="4.5" fill="#333" />
-      <rect  x="93"  cy="110" width="3.5" height="5"  rx="1.2" fill="#777" />
-
-      {/* ── CHUNKY SNEAKERS ── */}
-      <rect x="34" y="149" width="12" height="12" rx="3" fill="#FDBCB4" />
-      <rect x="54" y="149" width="12" height="12" rx="3" fill="#FDBCB4" />
-      <rect x="30" y="156" width="22" height="9" rx="4.5" fill="#0369A1" />
-      <rect x="48" y="156" width="22" height="9" rx="4.5" fill="#0369A1" />
-      <rect x="32" y="157" width="16" height="3.5" rx="1.8" fill="#EAB308" opacity="0.85" />
-      <rect x="50" y="157" width="16" height="3.5" rx="1.8" fill="#EAB308" opacity="0.85" />
-    </svg>
-  )
-}
-
-function CharSVG({ char, size, animClass }) {
-  if (char.id === 'rumi') return <RumiSVG size={size} animClass={animClass} />
-  if (char.id === 'mira') return <MiraSVG size={size} animClass={animClass} />
-  return <ZoeySVG size={size} animClass={animClass} />
-}
-
-/* ═══════════════════════════════════════════════════════════
-   TITLE SCREEN
-═══════════════════════════════════════════════════════════ */
-function TitleScreen({ onStart }) {
-  const bgStars = useRef(
-    Array.from({ length: 24 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
-      size: 10 + Math.random() * 18,
-      color: ['#C084FC', '#FB7185', '#38BDF8', '#FFD700'][i % 4],
-      dur: 1.8 + Math.random() * 2.8,
-      delay: Math.random() * 3,
-    }))
-  )
-
+function HUD({ char, score, timeLeft, combo=0, urgent=false }) {
   return (
     <div style={{
-      position: 'fixed', inset: 0,
-      background: 'linear-gradient(160deg, #0a0320 0%, #180840 45%, #0d1535 100%)',
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', overflow: 'hidden', padding: '1rem',
+      position:'absolute', top:0, left:0, right:0,
+      padding:'.6rem .9rem', display:'flex', alignItems:'center', gap:'.8rem',
+      background:'rgba(0,0,0,.5)', backdropFilter:'blur(8px)', zIndex:30,
     }}>
-      {/* Background sparkles */}
-      {bgStars.current.map(s => (
-        <div key={s.id} style={{
-          position: 'absolute',
-          left: `${s.x}%`, top: `${s.y}%`,
-          fontSize: `${s.size}px`,
-          color: s.color,
-          animation: `starTwinkle ${s.dur}s ease-in-out infinite`,
-          animationDelay: `${s.delay}s`,
-          pointerEvents: 'none',
-          userSelect: 'none',
-        }}>✦</div>
-      ))}
-
-      {/* Netflix + KPop badge */}
-      <div style={{
-        color: '#E50914', fontSize: '1.1rem', letterSpacing: '0.15em',
-        fontWeight: '900', marginBottom: '0.5rem', zIndex: 1,
-        textShadow: '0 2px 8px rgba(229,9,20,0.5)',
-      }}>
-        NETFLIX ✦ KPOP
-      </div>
-
-      {/* Title */}
-      <div style={{
-        animation: 'titleFloat 3s ease-in-out infinite',
-        textAlign: 'center', zIndex: 1, marginBottom: '1.5rem',
-      }}>
-        <h1 style={{
-          fontSize: 'clamp(2rem, 9vw, 4.5rem)',
-          fontWeight: '900', lineHeight: 1.05,
-          background: 'linear-gradient(135deg, #F0ABFC 0%, #818CF8 40%, #38BDF8 70%, #C084FC 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          animation: 'titleGlow 2.5s ease-in-out infinite',
-          letterSpacing: '0.02em',
-        }}>
-          デーモン<br />ハンターズ
-        </h1>
-        <div style={{
-          color: '#94A3B8', fontSize: 'clamp(0.8rem, 2.5vw, 1rem)',
-          letterSpacing: '0.3em', marginTop: '0.4rem',
-        }}>
-          ★ DEMON HUNTERS ★ STAR CATCH ★
+      <div style={{flex:1}}>
+        <div style={{color:'rgba(255,255,255,.5)',fontSize:'.65rem'}}>スコア</div>
+        <div style={{color:'#FFD700',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900,lineHeight:1}}>
+          {score.toLocaleString()}
         </div>
       </div>
-
-      {/* Character trio */}
-      <div style={{
-        display: 'flex', gap: 'clamp(0.5rem, 3vw, 1.5rem)',
-        alignItems: 'flex-end', marginBottom: '2rem', zIndex: 1,
-      }}>
-        {CHARS.map((c, i) => (
-          <div key={c.id} style={{
-            filter: `drop-shadow(0 0 16px ${c.color}99)`,
-            animationDelay: `${i * 0.2}s`,
-          }}>
-            <CharSVG char={c} size={72} animClass="charIdle" />
-            <div style={{
-              textAlign: 'center', color: c.color,
-              fontSize: '0.85rem', fontWeight: '700', marginTop: '2px',
-            }}>{c.name}</div>
-          </div>
-        ))}
+      <div style={{textAlign:'center',flexShrink:0}}>
+        <div style={{fontSize:'1.5rem'}}>{char.emoji}</div>
+        <div style={{color:char.color,fontSize:'.75rem',fontWeight:700}}>{char.name}</div>
       </div>
-
-      {/* Start button */}
-      <button
-        onClick={onStart}
-        style={{
-          padding: 'clamp(0.9rem, 3vw, 1.2rem) clamp(2rem, 6vw, 3.5rem)',
-          fontSize: 'clamp(1.2rem, 4vw, 1.6rem)',
-          fontWeight: '900', border: 'none', borderRadius: '100px',
-          background: 'linear-gradient(135deg, #C084FC 0%, #818CF8 50%, #38BDF8 100%)',
-          color: 'white', cursor: 'pointer',
-          animation: 'btnPulse 2s ease-in-out infinite',
-          letterSpacing: '0.08em', zIndex: 1,
-          boxShadow: '0 8px 32px rgba(192,132,252,0.5)',
-        }}
-      >
-        ▶ あそぼう！
-      </button>
-
-      <div style={{ color: '#475569', fontSize: '0.8rem', marginTop: '0.8rem', zIndex: 1 }}>
-        タップしてはじめる
+      <div style={{flex:1,textAlign:'right'}}>
+        <div style={{color:'rgba(255,255,255,.5)',fontSize:'.65rem'}}>のこり</div>
+        <div style={{
+          color:urgent?'#F87171':'white',
+          fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900,lineHeight:1,
+          animation:urgent?'urgentPulse .5s ease-in-out infinite':'none',
+        }}>
+          {timeLeft}
+        </div>
       </div>
+      {combo>=2&&(
+        <div style={{
+          position:'absolute',top:'100%',left:'50%',transform:'translateX(-50%)',
+          background:`${char.color}25`,border:`1.5px solid ${char.color}88`,
+          borderRadius:'100px',padding:'.15rem .8rem',color:char.color,
+          fontSize:'.85rem',fontWeight:700,zIndex:30,whiteSpace:'nowrap',
+          animation:'comboFlash .35s ease-in-out infinite',
+        }}>
+          {combo} コンボ！✨
+        </div>
+      )}
     </div>
   )
 }
 
-/* ═══════════════════════════════════════════════════════════
-   CHARACTER SELECT SCREEN
-═══════════════════════════════════════════════════════════ */
-function SelectScreen({ onSelect }) {
-  const [hovered, setHovered] = useState(null)
+function BackBtn({ onClick }) {
+  return (
+    <button onClick={onClick} style={{
+      position:'absolute',top:8,left:8,zIndex:50,
+      background:'rgba(0,0,0,.5)',border:'1.5px solid rgba(255,255,255,.3)',
+      borderRadius:'100px',color:'white',padding:'.3rem .9rem',
+      fontSize:'.85rem',cursor:'pointer',backdropFilter:'blur(4px)',
+    }}>← もどる</button>
+  )
+}
 
+function Confetti() {
+  const p = useRef(Array.from({length:60},(_,i)=>({
+    id:i, x:Math.random()*100,
+    color:['#C084FC','#FB7185','#38BDF8','#FFD700','#4ADE80','#FB923C','#F472B6'][i%7],
+    size:7+Math.random()*11, dur:2.2+Math.random()*2.8, delay:Math.random()*1.8,
+    round:Math.random()>.5,
+  })))
+  return (
+    <div style={{position:'fixed',inset:0,pointerEvents:'none',overflow:'hidden',zIndex:0}}>
+      {p.current.map(c=>(
+        <div key={c.id} style={{
+          position:'absolute',left:`${c.x}%`,top:'-20px',
+          width:c.size,height:c.size,background:c.color,
+          borderRadius:c.round?'50%':'2px',
+          animation:`confettiFall ${c.dur}s ease-in ${c.delay}s infinite`,
+        }}/>
+      ))}
+    </div>
+  )
+}
+
+function ScoreParticle({ p }) {
   return (
     <div style={{
-      position: 'fixed', inset: 0,
-      background: 'linear-gradient(160deg, #0a0320 0%, #180840 100%)',
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      padding: 'clamp(0.5rem, 2vw, 1.5rem)',
-      overflow: 'hidden',
+      position:'fixed',left:p.x-40,top:p.y-20,
+      color:p.color,fontSize:p.big?'1.9rem':'1.4rem',fontWeight:900,
+      pointerEvents:'none',animation:'floatUp .85s ease-out forwards',
+      textShadow:'0 2px 10px rgba(0,0,0,.9)',zIndex:200,whiteSpace:'nowrap',
+    }}>{p.text}</div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   TITLE SCREEN
+═══════════════════════════════════════════════════════ */
+function TitleScreen({ onStart }) {
+  const stars = useRef(Array.from({length:20},(_,i)=>({
+    id:i, x:Math.random()*100, y:Math.random()*100,
+    size:10+Math.random()*16,
+    color:['#C084FC','#FB7185','#38BDF8','#FFD700'][i%4],
+    dur:1.8+Math.random()*2.8, delay:Math.random()*3,
+  })))
+  return (
+    <div style={{
+      position:'fixed',inset:0,
+      background:'linear-gradient(160deg,#0a0320 0%,#180840 45%,#0d1535 100%)',
+      display:'flex',flexDirection:'column',alignItems:'center',
+      justifyContent:'center',overflow:'hidden',padding:'1rem',
     }}>
-      <h2 style={{
-        color: '#F0ABFC', fontWeight: '700', textAlign: 'center',
-        fontSize: 'clamp(1.2rem, 5vw, 2.2rem)',
-        marginBottom: 'clamp(1rem, 3vw, 2rem)',
-        animation: 'titleFloat 3s ease-in-out infinite',
-      }}>
+      {stars.current.map(s=>(
+        <div key={s.id} style={{
+          position:'absolute',left:`${s.x}%`,top:`${s.y}%`,
+          fontSize:`${s.size}px`,color:s.color,
+          animation:`starTwinkle ${s.dur}s ease-in-out infinite`,
+          animationDelay:`${s.delay}s`,pointerEvents:'none',
+        }}>✦</div>
+      ))}
+
+      {/* Character trio with real images */}
+      <div style={{display:'flex',gap:'clamp(.5rem,3vw,1.5rem)',alignItems:'flex-end',marginBottom:'1.5rem',zIndex:1}}>
+        {CHARS.map((c,i) => (
+          <div key={c.id} style={{textAlign:'center',animation:`titleFloat ${2.2+i*.3}s ease-in-out infinite`,animationDelay:`${i*.2}s`}}>
+            <div style={{
+              width:'clamp(80px,18vw,120px)',height:'clamp(80px,18vw,120px)',
+              borderRadius:'50%',overflow:'hidden',
+              border:`3px solid ${c.color}`,
+              boxShadow:`0 0 24px ${c.color}88`,margin:'0 auto',
+            }}>
+              <img src={c.img.profile} style={{width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
+            </div>
+            <div style={{color:c.color,fontSize:'.9rem',fontWeight:700,marginTop:'4px'}}>{c.name}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{color:'#E50914',fontSize:'1rem',letterSpacing:'.15em',fontWeight:900,marginBottom:'.4rem',zIndex:1}}>
+        NETFLIX ✦ KPOP
+      </div>
+      <div style={{animation:'titleFloat 3s ease-in-out infinite',textAlign:'center',zIndex:1,marginBottom:'1.5rem'}}>
+        <h1 style={{
+          fontSize:'clamp(2rem,9vw,4.5rem)',fontWeight:900,lineHeight:1.05,
+          background:'linear-gradient(135deg,#F0ABFC 0%,#818CF8 40%,#38BDF8 70%,#C084FC 100%)',
+          WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',
+          animation:'titleGlow 2.5s ease-in-out infinite',letterSpacing:'.02em',
+        }}>
+          デーモン<br/>ハンターズ
+        </h1>
+        <div style={{color:'#94A3B8',fontSize:'clamp(.8rem,2.5vw,1rem)',letterSpacing:'.3em',marginTop:'.4rem'}}>
+          ★ DEMON HUNTERS ★
+        </div>
+      </div>
+
+      <button onClick={onStart} style={{
+        padding:'clamp(.9rem,3vw,1.2rem) clamp(2rem,6vw,3.5rem)',
+        fontSize:'clamp(1.2rem,4vw,1.6rem)',fontWeight:900,border:'none',
+        borderRadius:'100px',
+        background:'linear-gradient(135deg,#C084FC 0%,#818CF8 50%,#38BDF8 100%)',
+        color:'white',cursor:'pointer',animation:'btnPulse 2s ease-in-out infinite',
+        letterSpacing:'.08em',zIndex:1,boxShadow:'0 8px 32px rgba(192,132,252,.5)',
+      }}>▶ あそぼう！</button>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   CHARACTER SELECT
+═══════════════════════════════════════════════════════ */
+function SelectScreen({ onSelect }) {
+  const [hov, setHov] = useState(null)
+  return (
+    <div style={{
+      position:'fixed',inset:0,
+      background:'linear-gradient(160deg,#0a0320 0%,#180840 100%)',
+      display:'flex',flexDirection:'column',alignItems:'center',
+      justifyContent:'center',padding:'clamp(.5rem,2vw,1.5rem)',overflow:'hidden',
+    }}>
+      <h2 style={{color:'#F0ABFC',fontWeight:700,textAlign:'center',
+        fontSize:'clamp(1.2rem,5vw,2.2rem)',marginBottom:'clamp(1rem,3vw,2rem)',
+        animation:'titleFloat 3s ease-in-out infinite'}}>
         ✨ だれといっしょにあそぶ？ ✨
       </h2>
-
-      <div style={{
-        display: 'flex', gap: 'clamp(0.5rem, 2vw, 1.2rem)',
-        flexWrap: 'wrap', justifyContent: 'center',
-        alignItems: 'stretch', maxWidth: '960px',
-      }}>
+      <div style={{display:'flex',gap:'clamp(.5rem,2vw,1.2rem)',flexWrap:'wrap',justifyContent:'center',maxWidth:960}}>
         {CHARS.map(c => (
-          <button
-            key={c.id}
-            onClick={() => onSelect(c)}
-            onMouseEnter={() => setHovered(c.id)}
-            onMouseLeave={() => setHovered(null)}
-            onPointerDown={() => setHovered(c.id)}
-            onPointerUp={() => setHovered(null)}
+          <button key={c.id} onClick={()=>onSelect(c)}
+            onMouseEnter={()=>setHov(c.id)} onMouseLeave={()=>setHov(null)}
             style={{
-              background: hovered === c.id
-                ? `linear-gradient(160deg, ${c.dark}cc, ${c.color}33)`
-                : 'rgba(255,255,255,0.04)',
-              border: `2.5px solid ${hovered === c.id ? c.color : 'rgba(255,255,255,0.1)'}`,
-              borderRadius: '28px',
-              padding: 'clamp(1rem, 3vw, 1.8rem) clamp(0.8rem, 2vw, 1.4rem)',
-              cursor: 'pointer',
-              transition: 'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', gap: '0.5rem',
-              minWidth: 'clamp(140px, 25vw, 240px)',
-              transform: hovered === c.id ? 'translateY(-10px) scale(1.04)' : 'translateY(0) scale(1)',
-              boxShadow: hovered === c.id ? `0 20px 56px ${c.color}44` : '0 4px 20px rgba(0,0,0,0.3)',
-              animation: hovered !== c.id ? 'cardGlow 3s ease-in-out infinite' : 'none',
-            }}
-          >
-            <div style={{ filter: `drop-shadow(0 0 12px ${c.color}88)` }}>
-              <CharSVG char={c} size={90} animClass={hovered === c.id ? 'charDance' : 'charIdle'} />
-            </div>
-            <div style={{ color: c.color, fontSize: 'clamp(1.4rem, 5vw, 2rem)', fontWeight: '900' }}>
-              {c.name}
-            </div>
-            <div style={{
-              background: c.color, color: 'white',
-              padding: '0.25rem 0.9rem', borderRadius: '100px',
-              fontSize: 'clamp(0.7rem, 2vw, 0.85rem)', fontWeight: '700',
+              background:hov===c.id?`linear-gradient(160deg,${c.dark}cc,${c.color}33)`:'rgba(255,255,255,.04)',
+              border:`2.5px solid ${hov===c.id?c.color:'rgba(255,255,255,.1)'}`,
+              borderRadius:'28px',padding:'clamp(1rem,3vw,1.8rem) clamp(.8rem,2vw,1.4rem)',
+              cursor:'pointer',transition:'all .3s cubic-bezier(.34,1.56,.64,1)',
+              display:'flex',flexDirection:'column',alignItems:'center',gap:'.5rem',
+              minWidth:'clamp(140px,25vw,220px)',
+              transform:hov===c.id?'translateY(-10px) scale(1.04)':'translateY(0) scale(1)',
+              boxShadow:hov===c.id?`0 20px 56px ${c.color}44`:'0 4px 20px rgba(0,0,0,.3)',
             }}>
+            <div style={{
+              width:'clamp(110px,22vw,160px)',height:'clamp(130px,26vw,190px)',
+              borderRadius:'16px',overflow:'hidden',
+              border:`2px solid ${c.color}55`,
+              boxShadow:`0 0 ${hov===c.id?'20px':'8px'} ${c.color}55`,
+              transition:'box-shadow .3s',
+            }}>
+              <img src={c.img.profile} style={{width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
+            </div>
+            <div style={{color:c.color,fontSize:'clamp(1.4rem,5vw,2rem)',fontWeight:900}}>{c.name}</div>
+            <div style={{background:c.color,color:'white',padding:'.25rem .9rem',borderRadius:'100px',fontSize:'.8rem',fontWeight:700}}>
               {c.emoji} {c.role}
             </div>
-            <div style={{
-              color: 'rgba(255,255,255,0.68)',
-              fontSize: 'clamp(0.75rem, 2vw, 0.9rem)',
-              textAlign: 'center', whiteSpace: 'pre-line', lineHeight: 1.55,
-            }}>
-              {c.desc}
-            </div>
+            <div style={{color:'rgba(255,255,255,.65)',fontSize:'.82rem',textAlign:'center'}}>{c.desc}</div>
           </button>
         ))}
       </div>
@@ -764,598 +394,913 @@ function SelectScreen({ onSelect }) {
   )
 }
 
-/* ═══════════════════════════════════════════════════════════
-   FALLING ITEM
-═══════════════════════════════════════════════════════════ */
-function FallingItem({ item, onCatch }) {
-  const handledRef = useRef(false)
-
-  function handleCatch(e) {
-    if (handledRef.current) return
-    handledRef.current = true
-    e.stopPropagation()
-    const cx = e.clientX ?? e.touches?.[0]?.clientX ?? item.x + item.size / 2
-    const cy = e.clientY ?? e.touches?.[0]?.clientY ?? item.y + item.size / 2
-    onCatch(item.id, item.pts, cx, cy, item.special)
-  }
-
-  return (
-    <div
-      onPointerDown={handleCatch}
-      style={{
-        position: 'absolute',
-        left: item.x,
-        top: item.y,
-        width:  item.size,
-        height: item.size,
-        fontSize: `${item.size * 0.66}px`,
-        lineHeight: `${item.size}px`,
-        textAlign: 'center',
-        cursor: 'pointer',
-        animation: `itemSpin ${1.2 + Math.random() * 0.6}s ease-in-out infinite`,
-        filter: `drop-shadow(0 0 10px ${item.glow})`,
-        zIndex: 10,
-        touchAction: 'none',
-        userSelect: 'none',
-        pointerEvents: 'all',
-      }}
-    >
-      {item.emoji}
-      {item.special && (
-        <div style={{
-          position: 'absolute', top: '-6px', right: '-6px',
-          fontSize: '14px', lineHeight: '14px',
-          animation: 'comboFlash 0.4s ease-in-out infinite',
-        }}>✨</div>
-      )}
-    </div>
-  )
-}
-
-/* ═══════════════════════════════════════════════════════════
-   SCORE PARTICLE
-═══════════════════════════════════════════════════════════ */
-function ScoreParticle({ p }) {
+/* ═══════════════════════════════════════════════════════
+   GAME HUB
+═══════════════════════════════════════════════════════ */
+function GameHub({ char, highScores, onSelectGame, onBack }) {
+  const [hov, setHov] = useState(null)
   return (
     <div style={{
-      position: 'fixed',
-      left: p.x - 40, top: p.y - 20,
-      color: p.color,
-      fontSize: p.big ? '1.9rem' : '1.4rem',
-      fontWeight: '900',
-      pointerEvents: 'none',
-      animation: 'floatUp 0.85s ease-out forwards',
-      textShadow: '0 2px 10px rgba(0,0,0,0.9)',
-      zIndex: 200,
-      whiteSpace: 'nowrap',
+      position:'fixed',inset:0,background:char.bg,
+      display:'flex',flexDirection:'column',alignItems:'center',
+      padding:'clamp(.5rem,2vw,1rem)',overflowY:'auto',
     }}>
-      {p.text}
-    </div>
-  )
-}
+      <BackBtn onClick={onBack}/>
 
-/* ═══════════════════════════════════════════════════════════
-   CONFETTI
-═══════════════════════════════════════════════════════════ */
-function Confetti() {
-  const pieces = useRef(
-    Array.from({ length: 60 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      color: ['#C084FC', '#FB7185', '#38BDF8', '#FFD700', '#4ADE80', '#FB923C', '#F472B6'][i % 7],
-      size: 7 + Math.random() * 11,
-      dur: 2.2 + Math.random() * 2.8,
-      delay: Math.random() * 1.8,
-      shape: Math.random() > 0.5,
-    }))
-  )
-  return (
-    <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-      {pieces.current.map(p => (
-        <div key={p.id} style={{
-          position: 'absolute',
-          left: `${p.x}%`, top: '-20px',
-          width: p.size, height: p.size,
-          background: p.color,
-          borderRadius: p.shape ? '50%' : '2px',
-          animation: `confettiFall ${p.dur}s ease-in ${p.delay}s infinite`,
-        }} />
-      ))}
-    </div>
-  )
-}
-
-/* ═══════════════════════════════════════════════════════════
-   GAME SCREEN
-═══════════════════════════════════════════════════════════ */
-function GameScreen({ char, score, timeLeft, items, combo, particles, charAnim, showTap, onCatch }) {
-  const urgent = timeLeft <= 10
-  const progress = timeLeft / GAME_SECS
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: char.bg,
-      overflow: 'hidden',
-    }}>
-      {/* Ambient background accents */}
-      {char.bgAccents.map((acc, i) => (
-        <div key={i} style={{
-          position: 'absolute',
-          left: `${(i * 22 + 5) % 95}%`,
-          top:  `${(i * 19 + 8) % 55}%`,
-          fontSize: '16px', opacity: 0.12,
-          animation: `starTwinkle ${2.5 + i * 0.4}s ease-in-out infinite`,
-          animationDelay: `${i * 0.5}s`,
-          pointerEvents: 'none',
-        }}>{acc}</div>
-      ))}
-
-      {/* ── TOP HUD ── */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0,
-        padding: '0.6rem 0.9rem',
-        display: 'flex', alignItems: 'center', gap: '0.8rem',
-        background: 'rgba(0,0,0,0.45)',
-        backdropFilter: 'blur(8px)',
-        zIndex: 30,
-      }}>
-        {/* Score */}
-        <div style={{ flex: 1 }}>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginBottom: '1px' }}>スコア</div>
-          <div style={{
-            color: '#FFD700',
-            fontSize: 'clamp(1.4rem, 5vw, 2.2rem)',
-            fontWeight: '900', lineHeight: 1,
-          }}>
-            {score.toLocaleString()}
-          </div>
+      {/* Character strip */}
+      <div style={{display:'flex',alignItems:'center',gap:'1rem',marginTop:'2.5rem',marginBottom:'1rem'}}>
+        <div style={{width:60,height:60,borderRadius:'50%',overflow:'hidden',border:`2.5px solid ${char.color}`,boxShadow:`0 0 16px ${char.color}88`}}>
+          <img src={char.img.profile} style={{width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
         </div>
-
-        {/* Character badge */}
-        <div style={{ textAlign: 'center', flexShrink: 0 }}>
-          <div style={{ fontSize: '1.6rem' }}>{char.emoji}</div>
-          <div style={{ color: char.color, fontSize: '0.75rem', fontWeight: '700' }}>{char.name}</div>
-        </div>
-
-        {/* Timer */}
-        <div style={{ flex: 1, textAlign: 'right' }}>
-          <div style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.65rem', marginBottom: '1px' }}>のこり</div>
-          <div style={{
-            color: urgent ? '#F87171' : 'white',
-            fontSize: 'clamp(1.4rem, 5vw, 2.2rem)',
-            fontWeight: '900', lineHeight: 1,
-            animation: urgent ? 'urgentPulse 0.5s ease-in-out infinite' : 'none',
-          }}>
-            {timeLeft}
-          </div>
+        <div>
+          <div style={{color:char.color,fontSize:'1.4rem',fontWeight:900}}>{char.name}</div>
+          <div style={{color:'rgba(255,255,255,.6)',fontSize:'.8rem'}}>といっしょにあそぼう！</div>
         </div>
       </div>
 
-      {/* Timer bar */}
-      <div style={{
-        position: 'absolute', top: '56px', left: 0, right: 0,
-        height: '5px', background: 'rgba(255,255,255,0.1)', zIndex: 30,
-      }}>
-        <div style={{
-          width: `${progress * 100}%`, height: '100%',
-          background: urgent
-            ? 'linear-gradient(90deg, #EF4444, #F87171)'
-            : `linear-gradient(90deg, ${char.dark}, ${char.color})`,
-          transition: 'width 1s linear',
-          boxShadow: `0 0 10px ${char.color}88`,
-        }} />
-      </div>
-
-      {/* Combo display */}
-      {combo >= 2 && (
-        <div style={{
-          position: 'absolute', top: '68px', left: '50%',
-          transform: 'translateX(-50%)',
-          background: `${char.color}25`,
-          border: `1.5px solid ${char.color}88`,
-          borderRadius: '100px',
-          padding: '0.2rem 1rem',
-          color: char.color, fontSize: '0.88rem', fontWeight: '700',
-          zIndex: 30, whiteSpace: 'nowrap',
-          animation: 'comboFlash 0.35s ease-in-out infinite',
-        }}>
-          {combo} コンボ！✨
-        </div>
-      )}
-
-      {/* Tap hint for first 3 seconds */}
-      {showTap && (
-        <div style={{
-          position: 'absolute', top: '40%', left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'white', fontSize: 'clamp(1.5rem, 6vw, 2.5rem)',
-          fontWeight: '900', textAlign: 'center',
-          pointerEvents: 'none', zIndex: 25,
-          textShadow: `0 0 20px ${char.color}`,
-          animation: 'comboFlash 0.6s ease-in-out infinite',
-        }}>
-          ⬇ タップして！ ⬇
-        </div>
-      )}
-
-      {/* Falling items */}
-      {items.map(item => (
-        <FallingItem key={item.id} item={item} onCatch={onCatch} />
-      ))}
-
-      {/* Score particles */}
-      {particles.map(p => (
-        <ScoreParticle key={p.id} p={p} />
-      ))}
-
-      {/* Character at bottom */}
-      <div style={{
-        position: 'absolute', bottom: 0,
-        left: '50%', transform: 'translateX(-50%)',
-        zIndex: 5,
-        filter: `drop-shadow(0 0 24px ${char.color}66)`,
-      }}>
-        <CharSVG char={char} size={120} animClass={charAnim} />
-      </div>
-    </div>
-  )
-}
-
-/* ═══════════════════════════════════════════════════════════
-   RESULT SCREEN
-═══════════════════════════════════════════════════════════ */
-function ResultScreen({ score, highScore, char, onReplay }) {
-  const stars = score >= 700 ? 3 : score >= 350 ? 2 : 1
-  const msgs = ['がんばった！', 'すごい！！', 'かんぺき！！✨']
-  const msg  = msgs[stars - 1]
-
-  return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      background: char.bg,
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      zIndex: 1, overflow: 'hidden',
-    }}>
-      <Confetti />
+      <h2 style={{color:'white',fontSize:'clamp(1rem,4vw,1.6rem)',fontWeight:700,marginBottom:'1rem',textAlign:'center'}}>
+        🎮 ゲームをえらんでね！
+      </h2>
 
       <div style={{
-        position: 'relative', zIndex: 10,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', textAlign: 'center',
-        gap: '0.9rem', padding: '1rem',
-        animation: 'slideInUp 0.5s ease-out',
+        display:'grid',
+        gridTemplateColumns:'repeat(auto-fill,minmax(clamp(140px,28vw,200px),1fr))',
+        gap:'clamp(.5rem,2vw,1rem)',
+        width:'100%',maxWidth:720,paddingBottom:'1rem',
       }}>
-        {/* All 3 characters celebrating */}
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
-          {CHARS.map(c => (
-            <div key={c.id} style={{
-              filter: c.id === char.id
-                ? `drop-shadow(0 0 20px ${c.color}dd)`
-                : `drop-shadow(0 0 8px ${c.color}44)`,
-              transform: c.id === char.id ? 'scale(1.15)' : 'scale(0.85)',
-              transition: 'transform 0.3s',
+        {GAMES.map(g => (
+          <button key={g.id}
+            onClick={()=>onSelectGame(g.id)}
+            onMouseEnter={()=>setHov(g.id)} onMouseLeave={()=>setHov(null)}
+            style={{
+              background:hov===g.id?`${char.color}25`:'rgba(255,255,255,.06)',
+              border:`2px solid ${hov===g.id?char.color:'rgba(255,255,255,.12)'}`,
+              borderRadius:'20px',padding:'1rem .8rem',cursor:'pointer',
+              transition:'all .25s ease',
+              transform:hov===g.id?'translateY(-4px) scale(1.03)':'scale(1)',
+              boxShadow:hov===g.id?`0 12px 32px ${char.color}33`:'none',
+              display:'flex',flexDirection:'column',alignItems:'center',gap:'.4rem',
             }}>
-              <CharSVG char={c} size={c.id === char.id ? 120 : 90} animClass="charCelebrate" />
-            </div>
-          ))}
-        </div>
+            <div style={{fontSize:'2.5rem'}}>{g.emoji}</div>
+            <div style={{color:'white',fontWeight:700,fontSize:'clamp(.85rem,3vw,1rem)'}}>{g.label}</div>
+            <div style={{color:'rgba(255,255,255,.55)',fontSize:'.72rem',textAlign:'center'}}>{g.desc}</div>
+            {highScores[g.id]>0&&(
+              <div style={{color:char.color,fontSize:'.72rem',fontWeight:700}}>
+                ベスト: {highScores[g.id].toLocaleString()}
+              </div>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
-        {/* Star rating */}
-        <div style={{ fontSize: 'clamp(2rem, 8vw, 3rem)', letterSpacing: '0.4rem' }}>
-          {Array.from({ length: 3 }, (_, i) => (
-            <span key={i} style={{
-              opacity: i < stars ? 1 : 0.18,
-              filter: i < stars ? 'drop-shadow(0 0 8px #FFD700)' : 'none',
-            }}>⭐</span>
-          ))}
+/* ═══════════════════════════════════════════════════════
+   RESULT SCREEN
+═══════════════════════════════════════════════════════ */
+function ResultScreen({ char, score, highScore, gameLabel, onReplay, onHub }) {
+  const stars = score>=700?3:score>=300?2:1
+  const msgs = ['がんばった！','すごい！！','かんぺき！✨']
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',zIndex:1,overflow:'hidden'}}>
+      <Confetti/>
+      <div style={{position:'relative',zIndex:10,display:'flex',flexDirection:'column',alignItems:'center',textAlign:'center',gap:'.9rem',padding:'1rem',animation:'slideInUp .5s ease-out'}}>
+        {/* Big character image */}
+        <div style={{width:'clamp(100px,25vw,160px)',height:'clamp(120px,30vw,200px)',borderRadius:'20px',overflow:'hidden',border:`3px solid ${char.color}`,boxShadow:`0 0 32px ${char.color}99`}}>
+          <img src={char.img.performance||char.img.profile} style={{width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
         </div>
-
-        {/* Message */}
-        <div style={{
-          color: 'white',
-          fontSize: 'clamp(1.8rem, 7vw, 3rem)',
-          fontWeight: '900',
-          animation: 'titleFloat 2s ease-in-out infinite',
-          textShadow: `0 0 24px ${char.color}`,
-        }}>
-          {msg}
+        <div style={{fontSize:'clamp(1.8rem,7vw,3rem)',letterSpacing:'.3rem'}}>
+          {Array.from({length:3},(_,i)=><span key={i} style={{opacity:i<stars?1:.18,filter:i<stars?'drop-shadow(0 0 8px #FFD700)':'none'}}>⭐</span>)}
         </div>
-
-        {/* Score card */}
-        <div style={{
-          background: 'rgba(255,255,255,0.08)',
-          borderRadius: '24px',
-          padding: '1rem 2rem',
-          border: `2px solid ${char.color}44`,
-          backdropFilter: 'blur(8px)',
-        }}>
-          <div style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.8rem', marginBottom: '4px' }}>
-            スコア
-          </div>
-          <div style={{
-            color: '#FFD700',
-            fontSize: 'clamp(2.2rem, 9vw, 4rem)',
-            fontWeight: '900', lineHeight: 1,
-          }}>
+        <div style={{color:'white',fontSize:'clamp(1.6rem,6vw,2.5rem)',fontWeight:900,animation:'titleFloat 2s ease-in-out infinite',textShadow:`0 0 24px ${char.color}`}}>
+          {msgs[stars-1]}
+        </div>
+        <div style={{background:'rgba(255,255,255,.08)',borderRadius:24,padding:'1rem 2rem',border:`2px solid ${char.color}44`,backdropFilter:'blur(8px)'}}>
+          <div style={{color:'rgba(255,255,255,.55)',fontSize:'.8rem',marginBottom:4}}>{gameLabel}</div>
+          <div style={{color:'#FFD700',fontSize:'clamp(2rem,9vw,3.5rem)',fontWeight:900,lineHeight:1}}>
             {score.toLocaleString()}
           </div>
-          {highScore > 0 && (
-            <div style={{ color: char.color, fontSize: '0.82rem', marginTop: '4px' }}>
-              {score >= highScore ? '🏆 新記録！' : `ハイスコア: ${highScore.toLocaleString()}`}
+          {highScore>0&&(
+            <div style={{color:char.color,fontSize:'.82rem',marginTop:4}}>
+              {score>=highScore?'🏆 新記録！':`ハイスコア: ${highScore.toLocaleString()}`}
             </div>
           )}
         </div>
-
-        {/* Replay button */}
-        <button
-          onClick={onReplay}
-          style={{
-            padding: 'clamp(0.85rem, 3vw, 1.1rem) clamp(2rem, 6vw, 3rem)',
-            fontSize: 'clamp(1.1rem, 4vw, 1.4rem)',
-            fontWeight: '900', border: 'none',
-            borderRadius: '100px',
-            background: `linear-gradient(135deg, ${char.color}, ${char.dark})`,
-            color: 'white', cursor: 'pointer',
-            animation: 'btnPulse 2s ease-in-out infinite',
-            letterSpacing: '0.05em',
-            marginTop: '0.3rem',
-            boxShadow: `0 8px 32px ${char.color}55`,
-          }}
-        >
-          🔄 もう一度あそぶ！
-        </button>
+        <div style={{display:'flex',gap:'.8rem',flexWrap:'wrap',justifyContent:'center'}}>
+          <button onClick={onReplay} style={{padding:'.85rem 1.8rem',fontSize:'clamp(1rem,3.5vw,1.2rem)',fontWeight:900,border:'none',borderRadius:'100px',background:`linear-gradient(135deg,${char.color},${char.dark})`,color:'white',cursor:'pointer',animation:'btnPulse 2s ease-in-out infinite',boxShadow:`0 8px 32px ${char.color}55`}}>
+            🔄 もう一度！
+          </button>
+          <button onClick={onHub} style={{padding:'.85rem 1.8rem',fontSize:'clamp(1rem,3.5vw,1.2rem)',fontWeight:900,border:`2px solid ${char.color}`,borderRadius:'100px',background:'transparent',color:char.color,cursor:'pointer'}}>
+            🎮 ゲームえらぶ
+          </button>
+        </div>
       </div>
     </div>
   )
 }
 
-/* ═══════════════════════════════════════════════════════════
-   MAIN APP
-═══════════════════════════════════════════════════════════ */
-export default function DemonHuntersGame() {
-  const [screen,   setScreen]   = useState('title')
-  const [char,     setChar]     = useState(null)
+/* ═══════════════════════════════════════════════════════
+   GAME 1: スターキャッチ
+═══════════════════════════════════════════════════════ */
+function StarCatch({ char, audio, onEnd, onBack }) {
   const [score,    setScore]    = useState(0)
-  const [timeLeft, setTimeLeft] = useState(GAME_SECS)
+  const [timeLeft, setTimeLeft] = useState(60)
   const [items,    setItems]    = useState([])
   const [combo,    setCombo]    = useState(0)
-  const [highScore,setHighScore]= useState(0)
   const [particles,setParticles]= useState([])
-  const [charAnim, setCharAnim] = useState('charIdle')
-  const [showTap,  setShowTap]  = useState(false)
+  const [showTap,  setShowTap]  = useState(true)
 
-  // Refs — values used inside rAF / setTimeout without stale closure
-  const audioRef     = useRef(null)
-  const rafRef       = useRef(null)
-  const timerRef     = useRef(null)
-  const spawnRef     = useRef(null)
-  const itemsRef     = useRef([])
-  const scoreRef     = useRef(0)
-  const comboRef     = useRef(0)
-  const timeRef      = useRef(GAME_SECS)
-  const nextIdRef    = useRef(0)
-  const dancingRef   = useRef(false)
-  const gameActiveRef= useRef(false)
+  const scoreRef=useRef(0),comboRef=useRef(0),timeRef=useRef(60)
+  const itemsRef=useRef([]),nextId=useRef(0)
+  const rafRef=useRef(null),timerRef=useRef(null),spawnRef=useRef(null)
+  const activeRef=useRef(true)
 
-  // Init audio
-  useEffect(() => {
-    audioRef.current = makeAudio()
-    return () => audioRef.current?.stop()
-  }, [])
-
-  // ── endGame (stable: uses only refs & stable setters) ──
-  const endGame = useCallback(() => {
-    if (!gameActiveRef.current) return
-    gameActiveRef.current = false
-
-    audioRef.current?.stop()
-
+  const endGame=useCallback(()=>{
+    if(!activeRef.current)return
+    activeRef.current=false
+    audio.stop()
     cancelAnimationFrame(rafRef.current)
     clearTimeout(spawnRef.current)
     clearInterval(timerRef.current)
+    setTimeout(()=>{audio.sfxGameOver();onEnd(scoreRef.current)},80)
+  },[audio,onEnd])
 
-    const finalScore = scoreRef.current
-    setHighScore(prev => {
-      const next = Math.max(prev, finalScore)
-      return next
-    })
-    setItems([])
-    itemsRef.current = []
-
-    // Small delay then game-over fanfare
-    setTimeout(() => {
-      audioRef.current?.sfxGameOver()
-      setScreen('result')
-    }, 120)
-  }, [])
-
-  // ── Animation loop ──
-  useEffect(() => {
-    if (screen !== 'game') {
-      cancelAnimationFrame(rafRef.current)
-      return
-    }
-
-    const H = window.innerHeight
-
-    function loop() {
-      if (!gameActiveRef.current) return
-      itemsRef.current = itemsRef.current
-        .map(item => ({ ...item, y: item.y + item.speed }))
-        .filter(item => item.y < H + ITEM_BASE + 20)
+  useEffect(()=>{
+    setTimeout(()=>setShowTap(false),3000)
+    audio.start()
+    const H=window.innerHeight
+    function loop(){
+      if(!activeRef.current)return
+      itemsRef.current=itemsRef.current.map(i=>({...i,y:i.y+i.speed})).filter(i=>i.y<H+80)
       setItems([...itemsRef.current])
-      rafRef.current = requestAnimationFrame(loop)
+      rafRef.current=requestAnimationFrame(loop)
     }
-
-    rafRef.current = requestAnimationFrame(loop)
-    return () => cancelAnimationFrame(rafRef.current)
-  }, [screen])
-
-  // ── Game timer ──
-  useEffect(() => {
-    if (screen !== 'game') {
-      clearInterval(timerRef.current)
-      return
+    rafRef.current=requestAnimationFrame(loop)
+    timerRef.current=setInterval(()=>{
+      const n=timeRef.current-1;timeRef.current=n;setTimeLeft(n)
+      if(n<=0){clearInterval(timerRef.current);endGame()}
+    },1000)
+    function spawn(){
+      if(!activeRef.current)return
+      const prog=1-timeRef.current/60
+      const rate=Math.max(550,1400-prog*850)
+      const sp=Math.random()<.08?SPECIAL_ITEMS:DROP_ITEMS
+      const pk=sp[Math.floor(Math.random()*sp.length)]
+      const sz=74+Math.random()*14
+      const W=window.innerWidth
+      itemsRef.current=[...itemsRef.current,{
+        id:nextId.current++,x:Math.max(0,Math.random()*(W-sz-8)),y:-sz-10,
+        size:sz,emoji:pk.emoji,pts:pk.pts,glow:pk.glow,
+        speed:1.6+prog*2.4+Math.random()*.4,special:sp===SPECIAL_ITEMS,
+      }]
+      spawnRef.current=setTimeout(spawn,rate)
     }
-
-    timerRef.current = setInterval(() => {
-      const next = timeRef.current - 1
-      timeRef.current = next
-      setTimeLeft(next)
-      if (next <= 0) {
-        clearInterval(timerRef.current)
-        endGame()
-      }
-    }, 1000)
-
-    return () => clearInterval(timerRef.current)
-  }, [screen, endGame])
-
-  // ── Item spawner ──
-  useEffect(() => {
-    if (screen !== 'game') {
+    spawnRef.current=setTimeout(spawn,600)
+    return()=>{
+      activeRef.current=false
+      cancelAnimationFrame(rafRef.current)
       clearTimeout(spawnRef.current)
-      return
+      clearInterval(timerRef.current)
     }
+  },[audio,endGame])
 
-    function spawn() {
-      if (!gameActiveRef.current) return
-      const progress  = 1 - timeRef.current / GAME_SECS
-      const spawnRate = Math.max(SPAWN_FAST, SPAWN_SLOW - progress * (SPAWN_SLOW - SPAWN_FAST))
-      const isSpecial = Math.random() < 0.08
-      const pool      = isSpecial ? SPECIAL_ITEMS : DROP_ITEMS
-      const pick      = pool[Math.floor(Math.random() * pool.length)]
-      const size      = isSpecial ? ITEM_BASE + 18 : ITEM_BASE + Math.random() * 14
-      const spd       = SPEED_SLOW + progress * (SPEED_FAST - SPEED_SLOW) + Math.random() * 0.5
-
-      const W = window.innerWidth
-      const item = {
-        id:      nextIdRef.current++,
-        x:       Math.max(0, Math.random() * (W - size - 8)),
-        y:       -size - 10,
-        size,
-        emoji:   pick.emoji,
-        pts:     pick.pts,
-        glow:    pick.glow,
-        speed:   spd,
-        special: isSpecial,
-      }
-
-      itemsRef.current = [...itemsRef.current, item]
-      spawnRef.current = setTimeout(spawn, spawnRate)
-    }
-
-    spawnRef.current = setTimeout(spawn, 600)
-    return () => clearTimeout(spawnRef.current)
-  }, [screen])
-
-  // ── Catch handler ──
-  const catchItem = useCallback((id, pts, cx, cy, isSpecial) => {
-    // Guard: item must still exist
-    if (!itemsRef.current.find(i => i.id === id)) return
-
-    itemsRef.current = itemsRef.current.filter(i => i.id !== id)
+  const catchItem=useCallback((id,pts,cx,cy,special)=>{
+    if(!itemsRef.current.find(i=>i.id===id))return
+    itemsRef.current=itemsRef.current.filter(i=>i.id!==id)
     setItems([...itemsRef.current])
+    const nc=comboRef.current+1;comboRef.current=nc;setCombo(nc)
+    const mult=nc>=5?3:nc>=3?2:1;const earned=pts*mult
+    scoreRef.current+=earned;setScore(scoreRef.current)
+    const pid=Date.now()+Math.random()
+    setParticles(p=>[...p,{id:pid,x:cx,y:cy,text:nc>=3?`+${earned} コンボ！！`:`+${earned}`,color:special?'#FFD700':nc>=3?'#FB923C':'white',big:nc>=3}])
+    setTimeout(()=>setParticles(p=>p.filter(x=>x.id!==pid)),900)
+    if(special)audio.sfxSpecial();else if(nc>=3)audio.sfxCombo();else audio.sfxCatch()
+  },[audio])
 
-    const newCombo = comboRef.current + 1
-    comboRef.current = newCombo
-    setCombo(newCombo)
-
-    const mult   = newCombo >= 5 ? 3 : newCombo >= 3 ? 2 : 1
-    const earned = pts * mult
-    scoreRef.current += earned
-    setScore(scoreRef.current)
-
-    // Particle
-    const pid = Date.now() + Math.random()
-    const particle = {
-      id:    pid,
-      x:     cx,
-      y:     cy,
-      text:  newCombo >= 3 ? `+${earned} コンボ！！` : `+${earned}`,
-      color: isSpecial ? '#FFD700' : newCombo >= 5 ? '#FFD700' : newCombo >= 3 ? '#FB923C' : 'white',
-      big:   newCombo >= 3 || isSpecial,
-    }
-    setParticles(prev => [...prev, particle])
-    setTimeout(() => setParticles(prev => prev.filter(p => p.id !== pid)), 900)
-
-    // Character dance
-    if (!dancingRef.current) {
-      dancingRef.current = true
-      setCharAnim('charDance')
-      setTimeout(() => {
-        setCharAnim('charIdle')
-        dancingRef.current = false
-      }, 650)
-    }
-
-    // Sound
-    if (isSpecial)       audioRef.current?.sfxSpecial()
-    else if (newCombo >= 3) audioRef.current?.sfxCombo()
-    else                 audioRef.current?.sfxCatch()
-  }, [])
-
-  // ── Start game ──
-  const startGame = useCallback((selectedChar) => {
-    // Reset
-    scoreRef.current   = 0
-    comboRef.current   = 0
-    timeRef.current    = GAME_SECS
-    nextIdRef.current  = 0
-    itemsRef.current   = []
-    gameActiveRef.current = true
-
-    setChar(selectedChar)
-    setScore(0)
-    setCombo(0)
-    setTimeLeft(GAME_SECS)
-    setItems([])
-    setParticles([])
-    setCharAnim('charIdle')
-    setShowTap(true)
-    setScreen('game')
-
-    // Tap hint disappears after 3 s
-    setTimeout(() => setShowTap(false), 3000)
-
-    // Start music (user interaction context → safe)
-    audioRef.current?.start()
-  }, [])
-
-  // ── Go to select ──
-  const goToSelect = useCallback(() => {
-    gameActiveRef.current = false
-    itemsRef.current = []
-    setItems([])
-    setParticles([])
-    setScreen('select')
-  }, [])
-
-  /* ── RENDER ── */
-  if (screen === 'title')  return <TitleScreen onStart={() => setScreen('select')} />
-  if (screen === 'select') return <SelectScreen onSelect={startGame} />
-  if (screen === 'game')   return (
-    <GameScreen
-      char={char}
-      score={score}
-      timeLeft={timeLeft}
-      items={items}
-      combo={combo}
-      particles={particles}
-      charAnim={charAnim}
-      showTap={showTap}
-      onCatch={catchItem}
-    />
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,overflow:'hidden'}}>
+      <BackBtn onClick={()=>{activeRef.current=false;audio.stop();onBack()}}/>
+      <HUD char={char} score={score} timeLeft={timeLeft} combo={combo} urgent={timeLeft<=10}/>
+      <div style={{position:'absolute',top:0,left:0,right:0,height:4,background:'rgba(255,255,255,.1)',zIndex:30}}>
+        <div style={{width:`${(timeLeft/60)*100}%`,height:'100%',background:timeLeft<=10?'#F87171':char.color,transition:'width 1s linear',boxShadow:`0 0 10px ${char.color}`}}/>
+      </div>
+      {showTap&&<div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',color:'white',fontSize:'clamp(1.4rem,5vw,2.2rem)',fontWeight:900,textAlign:'center',pointerEvents:'none',zIndex:25,textShadow:`0 0 20px ${char.color}`,animation:'comboFlash .6s ease-in-out infinite'}}>⬇ タップして！ ⬇</div>}
+      {items.map(item=>(
+        <div key={item.id} onPointerDown={e=>{e.stopPropagation();catchItem(item.id,item.pts,e.clientX,e.clientY,item.special)}}
+          style={{position:'absolute',left:item.x,top:item.y,width:item.size,height:item.size,fontSize:`${item.size*.66}px`,lineHeight:`${item.size}px`,textAlign:'center',cursor:'pointer',animation:'itemSpin 1.2s ease-in-out infinite',filter:`drop-shadow(0 0 10px ${item.glow})`,zIndex:10,touchAction:'none',userSelect:'none'}}>
+          {item.emoji}
+        </div>
+      ))}
+      {particles.map(p=><ScoreParticle key={p.id} p={p}/>)}
+      {/* Character real image at bottom */}
+      <div style={{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',zIndex:5,filter:`drop-shadow(0 0 20px ${char.color}88)`}}>
+        <img src={char.img.profile} style={{width:'clamp(80px,18vw,130px)',height:'clamp(90px,22vw,160px)',objectFit:'cover',objectPosition:'top',borderRadius:'12px 12px 0 0'}} draggable={false}/>
+      </div>
+    </div>
   )
-  if (screen === 'result') return (
-    <ResultScreen
-      score={score}
-      highScore={highScore}
-      char={char}
-      onReplay={goToSelect}
-    />
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAME 2: メモリーカード
+═══════════════════════════════════════════════════════ */
+const CARD_BASE = [
+  {key:'rumi_p',   src:IMG.rumi.profile,     label:'ルミ',   charColor:'#C084FC'},
+  {key:'mira_p',   src:IMG.mira.profile,     label:'ミラ',   charColor:'#FB7185'},
+  {key:'zoey_p',   src:IMG.zoey.profile,     label:'ゾーイ', charColor:'#38BDF8'},
+  {key:'rumi_s',   src:IMG.rumi.sword,       label:'ルミ⚔️', charColor:'#C084FC'},
+  {key:'mira_d',   src:IMG.mira.dance,       label:'ミラ💃', charColor:'#FB7185'},
+  {key:'zoey_s',   src:IMG.zoey.stage,       label:'ゾーイ🎤',charColor:'#38BDF8'},
+]
+
+function MemoryCards({ char, audio, onEnd, onBack }) {
+  const [cards] = useState(()=>shuffle(CARD_BASE.flatMap((c,i)=>[{...c,uid:i*2},{...c,uid:i*2+1}])))
+  const [flipped,  setFlipped]  = useState([])   // card indices currently face-up (pending check)
+  const [matched,  setMatched]  = useState(new Set())   // uids of matched cards
+  const [moves,    setMoves]    = useState(0)
+  const [timeLeft, setTimeLeft] = useState(90)
+  const lockRef=useRef(false),timerRef=useRef(null),activeRef=useRef(true)
+  const timeRef=useRef(90),moveRef=useRef(0)
+
+  const endGame=useCallback((matched_count)=>{
+    if(!activeRef.current)return
+    activeRef.current=false
+    clearInterval(timerRef.current)
+    audio.stop()
+    const tBonus=timeRef.current*4,mBonus=Math.max(0,300-moveRef.current*8),pBonus=matched_count*60
+    setTimeout(()=>{audio.sfxGameOver();onEnd(tBonus+mBonus+pBonus)},200)
+  },[audio,onEnd])
+
+  useEffect(()=>{
+    audio.start()
+    timerRef.current=setInterval(()=>{
+      const n=timeRef.current-1;timeRef.current=n;setTimeLeft(n)
+      if(n<=0){clearInterval(timerRef.current);endGame(matched.size/2)}
+    },1000)
+    return()=>{activeRef.current=false;clearInterval(timerRef.current)}
+  },[])// eslint-disable-line
+
+  function flipCard(idx) {
+    if(!activeRef.current||lockRef.current)return
+    if(matched.has(cards[idx].uid))return
+    if(flipped.includes(idx))return
+    const nf=[...flipped,idx]
+    setFlipped(nf)
+    audio.sfxCardFlip()
+    if(nf.length===2){
+      lockRef.current=true
+      moveRef.current+=1;setMoves(moveRef.current)
+      const [a,b]=nf
+      if(cards[a].key===cards[b].key){
+        setTimeout(()=>{
+          setMatched(prev=>{
+            const nx=new Set(prev);nx.add(cards[a].uid);nx.add(cards[b].uid)
+            if(nx.size===cards.length){setTimeout(()=>endGame(nx.size/2),400)}
+            return nx
+          })
+          setFlipped([]);lockRef.current=false;audio.sfxCardMatch()
+        },600)
+      }else{
+        setTimeout(()=>{setFlipped([]);lockRef.current=false},1100)
+      }
+    }
+  }
+
+  const cols=4,rows=Math.ceil(cards.length/cols)
+  const cardW=Math.min(Math.floor((window.innerWidth-32)/(cols+.5)),110)
+  const cardH=Math.round(cardW*1.35)
+
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,display:'flex',flexDirection:'column',alignItems:'center',overflow:'hidden'}}>
+      <BackBtn onClick={()=>{activeRef.current=false;audio.stop();onBack()}}/>
+      {/* HUD */}
+      <div style={{paddingTop:'52px',paddingBottom:'8px',display:'flex',gap:'2rem',color:'white',fontSize:'clamp(.9rem,3vw,1.1rem)',fontWeight:700}}>
+        <span>⏱ {timeLeft}s</span>
+        <span style={{color:'#FFD700'}}>✅ {matched.size/2}/{cards.length/2}</span>
+        <span style={{color:'rgba(255,255,255,.6)'}}>👆 {moves}</span>
+      </div>
+      {/* Grid */}
+      <div style={{display:'grid',gridTemplateColumns:`repeat(${cols},${cardW}px)`,gap:8,padding:'4px 12px',overflowY:'auto'}}>
+        {cards.map((card,idx)=>{
+          const isUp=flipped.includes(idx)||matched.has(card.uid)
+          const isMatched=matched.has(card.uid)
+          return (
+            <div key={card.uid} onPointerDown={()=>flipCard(idx)} style={{
+              width:cardW,height:cardH,borderRadius:12,overflow:'hidden',cursor:'pointer',
+              border:`2.5px solid ${isMatched?'#FFD700':isUp?card.charColor:'rgba(255,255,255,.2)'}`,
+              boxShadow:isMatched?'0 0 16px #FFD700':isUp?`0 0 12px ${card.charColor}88`:'none',
+              background:'rgba(0,0,0,.5)',transition:'box-shadow .2s',
+              animation:isMatched?'cardMatch .4s ease-out':'none',
+              position:'relative',
+            }}>
+              {isUp?(
+                <img src={card.src} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top',animation:'cardIn .2s ease-out'}} draggable={false}/>
+              ):(
+                <div style={{
+                  width:'100%',height:'100%',
+                  background:`linear-gradient(135deg,${char.dark},${char.color}66)`,
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:cardW*.45,
+                }}>
+                  {char.emoji}
+                </div>
+              )}
+              {isMatched&&<div style={{position:'absolute',top:4,right:4,fontSize:'1rem'}}>✅</div>}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
-  return null
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAME 3: バブルポップ
+═══════════════════════════════════════════════════════ */
+function BubblePop({ char, audio, onEnd, onBack }) {
+  const [score,    setScore]    = useState(0)
+  const [timeLeft, setTimeLeft] = useState(50)
+  const [bubbles,  setBubbles]  = useState([])
+  const [pops,     setPops]     = useState([])   // popped animation {id,x,y,color}
+
+  const scoreRef=useRef(0),timeRef=useRef(50),bubblesRef=useRef([])
+  const nextId=useRef(0),rafRef=useRef(null),timerRef=useRef(null),spawnRef=useRef(null)
+  const activeRef=useRef(true)
+
+  const BIMGS=[
+    {src:IMG.rumi.profile,     color:CHARS[0].color},
+    {src:IMG.mira.profile,     color:CHARS[1].color},
+    {src:IMG.zoey.profile,     color:CHARS[2].color},
+    {src:IMG.rumi.performance, color:CHARS[0].color},
+    {src:IMG.mira.dance,       color:CHARS[1].color},
+    {src:IMG.zoey.closeup,     color:CHARS[2].color},
+  ]
+
+  const endGame=useCallback(()=>{
+    if(!activeRef.current)return
+    activeRef.current=false;audio.stop()
+    cancelAnimationFrame(rafRef.current);clearTimeout(spawnRef.current);clearInterval(timerRef.current)
+    setTimeout(()=>{audio.sfxGameOver();onEnd(scoreRef.current)},80)
+  },[audio,onEnd])
+
+  useEffect(()=>{
+    audio.start()
+    const H=window.innerHeight
+    function loop(){
+      if(!activeRef.current)return
+      bubblesRef.current=bubblesRef.current.map(b=>({...b,y:b.y-b.speed})).filter(b=>b.y>-b.size-20)
+      setBubbles([...bubblesRef.current]);rafRef.current=requestAnimationFrame(loop)
+    }
+    rafRef.current=requestAnimationFrame(loop)
+    timerRef.current=setInterval(()=>{
+      const n=timeRef.current-1;timeRef.current=n;setTimeLeft(n)
+      if(n<=0){clearInterval(timerRef.current);endGame()}
+    },1000)
+    function spawn(){
+      if(!activeRef.current)return
+      const prog=1-timeRef.current/50
+      const rate=Math.max(550,1500-prog*950)
+      const pick=BIMGS[Math.floor(Math.random()*BIMGS.length)]
+      const size=68+Math.random()*28
+      const W=window.innerWidth
+      bubblesRef.current=[...bubblesRef.current,{
+        id:nextId.current++,x:Math.max(0,Math.random()*(W-size)),y:H+10,
+        size,src:pick.src,color:pick.color,speed:1.4+prog*1.6+Math.random()*.4,pts:10,
+      }]
+      spawnRef.current=setTimeout(spawn,rate)
+    }
+    spawnRef.current=setTimeout(spawn,500)
+    return()=>{activeRef.current=false;cancelAnimationFrame(rafRef.current);clearTimeout(spawnRef.current);clearInterval(timerRef.current)}
+  },[])// eslint-disable-line
+
+  function popBubble(id,x,y,color,pts){
+    if(!bubblesRef.current.find(b=>b.id===id))return
+    bubblesRef.current=bubblesRef.current.filter(b=>b.id!==id)
+    setBubbles([...bubblesRef.current])
+    scoreRef.current+=pts;setScore(scoreRef.current)
+    const pid=Date.now()+Math.random()
+    setPops(p=>[...p,{id:pid,x,y,color}])
+    setTimeout(()=>setPops(p=>p.filter(x=>x.id!==pid)),400)
+    audio.sfxBubble()
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,overflow:'hidden'}}>
+      <BackBtn onClick={()=>{activeRef.current=false;audio.stop();onBack()}}/>
+      <div style={{position:'absolute',top:0,left:0,right:0,padding:'.6rem 1rem',background:'rgba(0,0,0,.45)',backdropFilter:'blur(6px)',zIndex:30,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{color:'#FFD700',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900}}>{score.toLocaleString()}</div>
+        <div style={{color:char.color,fontSize:'1.1rem',fontWeight:700}}>{char.emoji} {char.name}</div>
+        <div style={{color:timeLeft<=10?'#F87171':'white',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900,animation:timeLeft<=10?'urgentPulse .5s infinite':'none'}}>{timeLeft}s</div>
+      </div>
+      {/* Bubbles */}
+      {bubbles.map(b=>(
+        <div key={b.id} onPointerDown={e=>{e.stopPropagation();popBubble(b.id,e.clientX,e.clientY,b.color,b.pts)}}
+          style={{
+            position:'absolute',left:b.x,top:b.y,width:b.size,height:b.size,
+            borderRadius:'50%',overflow:'hidden',cursor:'pointer',touchAction:'none',
+            border:`3px solid ${b.color}`,boxShadow:`0 0 20px ${b.color}66`,
+            animation:'bubbleWobble 1.5s ease-in-out infinite',
+          }}>
+          <img src={b.src} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}} draggable={false}/>
+        </div>
+      ))}
+      {/* Pop effects */}
+      {pops.map(p=>(
+        <div key={p.id} style={{position:'fixed',left:p.x-30,top:p.y-30,width:60,height:60,borderRadius:'50%',background:p.color,animation:'bubblePop .4s ease-out forwards',pointerEvents:'none',zIndex:100,opacity:.8}}/>
+      ))}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAME 4: かくれんぼ
+═══════════════════════════════════════════════════════ */
+const SPOTS=[
+  {x:'18%',y:'45%'},{x:'50%',y:'38%'},{x:'82%',y:'45%'}
+]
+const HIDE_EMOJIS=['⭐','🌙','🔮']
+
+function HideSeek({ char, audio, onEnd, onBack }) {
+  const [score,    setScore]    = useState(0)
+  const [timeLeft, setTimeLeft] = useState(60)
+  const [active,   setActive]   = useState(null)   // {spotIdx, charObj, appeared}
+  const [justPopped, setJustPopped] = useState(null)
+
+  const scoreRef=useRef(0),timeRef=useRef(60),activeRef2=useRef(true)
+  const activeDataRef=useRef(null),timerRef=useRef(null),showTimer=useRef(null),nextTimer=useRef(null)
+
+  const endGame=useCallback(()=>{
+    if(!activeRef2.current)return
+    activeRef2.current=false;audio.stop()
+    clearInterval(timerRef.current);clearTimeout(showTimer.current);clearTimeout(nextTimer.current)
+    setTimeout(()=>{audio.sfxGameOver();onEnd(scoreRef.current)},80)
+  },[audio,onEnd])
+
+  function scheduleNext(delay){
+    clearTimeout(nextTimer.current)
+    nextTimer.current=setTimeout(()=>{
+      if(!activeRef2.current)return
+      const prog=1-timeRef.current/60
+      const duration=Math.max(750,1600-prog*850)
+      const waitAfter=Math.max(350,900-prog*550)
+      const c=CHARS[Math.floor(Math.random()*3)]
+      const s=Math.floor(Math.random()*3)
+      const data={spotIdx:s,charObj:c,appeared:Date.now()}
+      activeDataRef.current=data;setActive(data);audio.sfxAppear()
+      showTimer.current=setTimeout(()=>{
+        if(activeDataRef.current===data){setActive(null);activeDataRef.current=null;audio.sfxHide()}
+        scheduleNext(waitAfter)
+      },duration)
+    },delay)
+  }
+
+  useEffect(()=>{
+    audio.start()
+    timerRef.current=setInterval(()=>{
+      const n=timeRef.current-1;timeRef.current=n;setTimeLeft(n)
+      if(n<=0){clearInterval(timerRef.current);endGame()}
+    },1000)
+    scheduleNext(1000)
+    return()=>{activeRef2.current=false;clearInterval(timerRef.current);clearTimeout(showTimer.current);clearTimeout(nextTimer.current)}
+  },[])// eslint-disable-line
+
+  function tapSpot(spotIdx){
+    if(!activeDataRef.current||activeDataRef.current.spotIdx!==spotIdx)return
+    const data=activeDataRef.current
+    clearTimeout(showTimer.current)
+    activeDataRef.current=null;setActive(null)
+    const elapsed=Date.now()-data.appeared
+    const pts=elapsed<500?40:elapsed<900?25:12
+    scoreRef.current+=pts;setScore(scoreRef.current)
+    setJustPopped({spotIdx,pts})
+    setTimeout(()=>setJustPopped(null),500)
+    audio.sfxCatch()
+    scheduleNext(600)
+  }
+
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,overflow:'hidden'}}>
+      <BackBtn onClick={()=>{activeRef2.current=false;audio.stop();onBack()}}/>
+      <div style={{position:'absolute',top:0,left:0,right:0,padding:'.6rem 1rem',background:'rgba(0,0,0,.45)',backdropFilter:'blur(6px)',zIndex:30,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{color:'#FFD700',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900}}>{score.toLocaleString()}</div>
+        <div style={{color:'rgba(255,255,255,.7)',fontSize:'.9rem',fontWeight:600}}>👀 でてきたらタップ！</div>
+        <div style={{color:timeLeft<=10?'#F87171':'white',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900}}>{timeLeft}s</div>
+      </div>
+
+      {/* Background decoration */}
+      <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center',opacity:.06,fontSize:'8rem',pointerEvents:'none'}}>✦</div>
+
+      {/* Hiding spots */}
+      {SPOTS.map((spot,idx)=>{
+        const isActive=active?.spotIdx===idx
+        const isPopped=justPopped?.spotIdx===idx
+        return (
+          <div key={idx} onPointerDown={()=>tapSpot(idx)} style={{
+            position:'absolute',left:spot.x,top:spot.y,
+            transform:'translate(-50%,-50%)',
+            cursor:'pointer',userSelect:'none',touchAction:'none',
+          }}>
+            {/* Hiding object */}
+            <div style={{
+              fontSize:'clamp(80px,18vw,120px)',lineHeight:1,textAlign:'center',
+              animation:'hideSpotGlow 3s ease-in-out infinite',
+              filter:isActive?`drop-shadow(0 0 24px ${active.charObj.color})`:`drop-shadow(0 0 8px rgba(255,255,255,.15))`,
+              transition:'filter .2s',
+            }}>
+              {HIDE_EMOJIS[idx]}
+            </div>
+            {/* Character peeking out */}
+            {isActive&&(
+              <div style={{
+                position:'absolute',bottom:'55%',left:'50%',
+                animation:'peekOut .15s ease-out',
+                pointerEvents:'none',
+              }}>
+                <div style={{
+                  width:'clamp(60px,14vw,90px)',height:'clamp(60px,14vw,90px)',
+                  borderRadius:'50%',overflow:'hidden',
+                  border:`3px solid ${active.charObj.color}`,
+                  boxShadow:`0 0 20px ${active.charObj.color}cc`,
+                }}>
+                  <img src={active.charObj.img.profile} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}} draggable={false}/>
+                </div>
+              </div>
+            )}
+            {/* Popped score */}
+            {isPopped&&(
+              <div style={{
+                position:'absolute',top:'-20px',left:'50%',
+                color:'#FFD700',fontWeight:900,fontSize:'1.6rem',
+                animation:'hidePop .5s ease-out forwards',
+                pointerEvents:'none',whiteSpace:'nowrap',
+              }}>
+                +{justPopped.pts}
+              </div>
+            )}
+          </div>
+        )
+      })}
+
+      {/* Instruction at start */}
+      <div style={{position:'absolute',bottom:'1.5rem',left:'50%',transform:'translateX(-50%)',color:'rgba(255,255,255,.55)',fontSize:'.85rem',textAlign:'center',pointerEvents:'none',whiteSpace:'nowrap'}}>
+        キャラクターがでてきたら すばやくタップ！⚡
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAME 5: リズムタップ
+═══════════════════════════════════════════════════════ */
+function RhythmTap({ char, audio, onEnd, onBack }) {
+  const [score,    setScore]    = useState(0)
+  const [timeLeft, setTimeLeft] = useState(60)
+  const [notes,    setNotes]    = useState([])
+  const [feedback, setFeedback] = useState(null)  // {col,text,color}
+  const [colFlash, setColFlash] = useState(null)
+
+  const scoreRef=useRef(0),timeRef=useRef(60),notesRef=useRef([])
+  const nextId=useRef(0),rafRef=useRef(null),timerRef=useRef(null),spawnRef=useRef(null)
+  const activeRef=useRef(true),fbTimer=useRef(null)
+  // Target zone: bottom 100px of game area
+  const GAME_H=useRef(0),TARGET_Y=useRef(0)
+
+  const endGame=useCallback(()=>{
+    if(!activeRef.current)return
+    activeRef.current=false;audio.stop()
+    cancelAnimationFrame(rafRef.current);clearTimeout(spawnRef.current);clearInterval(timerRef.current)
+    setTimeout(()=>{audio.sfxGameOver();onEnd(scoreRef.current)},80)
+  },[audio,onEnd])
+
+  useEffect(()=>{
+    const H=window.innerHeight
+    GAME_H.current=H;TARGET_Y.current=H-130
+    audio.start()
+    function loop(){
+      if(!activeRef.current)return
+      notesRef.current=notesRef.current.map(n=>({...n,y:n.y+n.speed})).filter(n=>{
+        if(n.y>GAME_H.current+20){return false}
+        return true
+      })
+      setNotes([...notesRef.current]);rafRef.current=requestAnimationFrame(loop)
+    }
+    rafRef.current=requestAnimationFrame(loop)
+    timerRef.current=setInterval(()=>{const n=timeRef.current-1;timeRef.current=n;setTimeLeft(n);if(n<=0){clearInterval(timerRef.current);endGame()}},1000)
+    function spawn(){
+      if(!activeRef.current)return
+      const prog=1-timeRef.current/60
+      const rate=Math.max(450,1100-prog*650)
+      const col=Math.floor(Math.random()*3)
+      notesRef.current=[...notesRef.current,{
+        id:nextId.current++,col,y:-50,
+        speed:2.2+prog*2.2+Math.random()*.4,pts:10,
+      }]
+      spawnRef.current=setTimeout(spawn,rate)
+    }
+    spawnRef.current=setTimeout(spawn,600)
+    return()=>{activeRef.current=false;cancelAnimationFrame(rafRef.current);clearTimeout(spawnRef.current);clearInterval(timerRef.current)}
+  },[])// eslint-disable-line
+
+  function tapCol(col){
+    setColFlash(col);setTimeout(()=>setColFlash(null),150)
+    const inZone=notesRef.current.filter(n=>n.col===col&&n.y>TARGET_Y.current-70&&n.y<TARGET_Y.current+60)
+    if(!inZone.length)return
+    const closest=inZone.reduce((a,b)=>Math.abs(a.y-TARGET_Y.current)<Math.abs(b.y-TARGET_Y.current)?a:b)
+    const off=Math.abs(closest.y-TARGET_Y.current)
+    const type=off<22?'かんぺき！':off<50?'グッド！':'OK'
+    const pts=off<22?30:off<50?20:10
+    notesRef.current=notesRef.current.filter(n=>n.id!==closest.id)
+    scoreRef.current+=pts;setScore(scoreRef.current)
+    clearTimeout(fbTimer.current)
+    setFeedback({col,text:type,color:off<22?'#FFD700':off<50?CHARS[col].color:'rgba(255,255,255,.7)'})
+    fbTimer.current=setTimeout(()=>setFeedback(null),500)
+    if(off<22)audio.sfxCombo();else audio.sfxRhythmGood()
+  }
+
+  const colW=Math.floor((window.innerWidth-24)/3)
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,overflow:'hidden'}}>
+      <BackBtn onClick={()=>{activeRef.current=false;audio.stop();onBack()}}/>
+      {/* Score + Timer */}
+      <div style={{position:'absolute',top:0,left:0,right:0,padding:'.6rem 1rem',background:'rgba(0,0,0,.45)',backdropFilter:'blur(6px)',zIndex:30,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{color:'#FFD700',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900}}>{score.toLocaleString()}</div>
+        <div style={{color:'rgba(255,255,255,.7)',fontSize:'.9rem'}}>🎵 リズムタップ</div>
+        <div style={{color:timeLeft<=10?'#F87171':'white',fontSize:'clamp(1.3rem,5vw,2rem)',fontWeight:900}}>{timeLeft}s</div>
+      </div>
+
+      {/* Lane headers */}
+      <div style={{position:'absolute',top:52,left:0,right:0,display:'flex',zIndex:20}}>
+        {CHARS.map((c,i)=>(
+          <div key={c.id} style={{flex:1,textAlign:'center',padding:'.3rem 0',borderBottom:`2px solid ${c.color}44`,background:`${c.color}10`}}>
+            <div style={{width:36,height:36,borderRadius:'50%',overflow:'hidden',margin:'0 auto',border:`2px solid ${c.color}`}}>
+              <img src={c.img.profile} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}} draggable={false}/>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Lane dividers */}
+      {[1,2].map(i=>(
+        <div key={i} style={{position:'absolute',top:52,bottom:0,left:`${(100/3)*i}%`,width:'1px',background:'rgba(255,255,255,.1)',zIndex:1}}/>
+      ))}
+
+      {/* Notes */}
+      {notes.map(n=>(
+        <div key={n.id} style={{
+          position:'absolute',
+          left:n.col*(colW+8)+12,
+          top:n.y,
+          width:colW-8,height:44,
+          borderRadius:22,
+          background:`linear-gradient(135deg,${CHARS[n.col].dark},${CHARS[n.col].color})`,
+          boxShadow:`0 0 16px ${CHARS[n.col].color}88`,
+          display:'flex',alignItems:'center',justifyContent:'center',
+          fontSize:'1.3rem',
+          zIndex:10,pointerEvents:'none',
+        }}>
+          <img src={CHARS[n.col].img.profile} style={{width:36,height:36,objectFit:'cover',objectPosition:'top',borderRadius:'50%',border:`2px solid white`}} draggable={false}/>
+        </div>
+      ))}
+
+      {/* Hit zone line */}
+      <div style={{position:'absolute',bottom:120,left:0,right:0,height:3,background:'rgba(255,255,255,.25)',zIndex:5,boxShadow:'0 0 8px rgba(255,255,255,.3)'}}/>
+
+      {/* Feedback labels */}
+      {feedback&&(
+        <div style={{
+          position:'absolute',
+          left:`calc(${feedback.col*(100/3)}% + ${(100/3)/2}% - 40px)`,
+          bottom:160,color:feedback.color,fontWeight:900,fontSize:'1.4rem',
+          animation:'feedbackPop .5s ease-out forwards',
+          pointerEvents:'none',zIndex:20,whiteSpace:'nowrap',
+        }}>
+          {feedback.text}
+        </div>
+      )}
+
+      {/* Tap buttons */}
+      <div style={{position:'absolute',bottom:16,left:0,right:0,display:'flex',gap:8,padding:'0 12px',zIndex:20}}>
+        {CHARS.map((c,i)=>(
+          <button key={c.id} onPointerDown={()=>tapCol(i)} style={{
+            flex:1,height:90,borderRadius:16,border:`3px solid ${c.color}`,
+            background:colFlash===i?`${c.color}55`:`${c.color}20`,
+            cursor:'pointer',touchAction:'none',
+            transition:'background .1s',
+            display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:4,
+            boxShadow:colFlash===i?`0 0 24px ${c.color}`:'none',
+          }}>
+            <div style={{width:44,height:44,borderRadius:'50%',overflow:'hidden',border:`2px solid ${c.color}`,boxShadow:`0 0 12px ${c.color}88`}}>
+              <img src={c.img.profile} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}} draggable={false}/>
+            </div>
+            <div style={{color:c.color,fontSize:'.7rem',fontWeight:700}}>{c.name}</div>
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   GAME 6: パズル
+═══════════════════════════════════════════════════════ */
+const PUZZLE_IMGS=[
+  {src:IMG.rumi.performance, label:'ルミ',   color:CHARS[0].color},
+  {src:IMG.mira.stool,       label:'ミラ',   color:CHARS[1].color},
+  {src:IMG.zoey.stage,       label:'ゾーイ', color:CHARS[2].color},
+]
+// 2x3 grid = 6 pieces
+const PCOLS=3, PROWS=2
+
+function Puzzle({ char, audio, onEnd, onBack }) {
+  const [imgIdx,    setImgIdx]    = useState(null)  // which image selected
+  const [pieces,    setPieces]    = useState(null)  // array of origPos values
+  const [selected,  setSelected]  = useState(null)  // currently selected tile index
+  const [moves,     setMoves]     = useState(0)
+  const [done,      setDone]      = useState(false)
+  const startTime=useRef(null),moveRef=useRef(0),activeRef=useRef(true)
+
+  function startPuzzle(idx){
+    setImgIdx(idx)
+    let arr=Array.from({length:PCOLS*PROWS},(_,i)=>i)
+    // Shuffle until not solved
+    do{arr=shuffle(arr)}while(arr.every((v,i)=>v===i))
+    setPieces(arr);setSelected(null);setMoves(0);moveRef.current=0;setDone(false)
+    startTime.current=Date.now();audio.start()
+  }
+
+  function tapPiece(idx){
+    if(done||!activeRef.current)return
+    if(selected===null){setSelected(idx);audio.sfxPieceMove()}
+    else{
+      if(selected===idx){setSelected(null);return}
+      const np=[...pieces];[np[selected],np[idx]]=[np[idx],np[selected]]
+      setPieces(np);setSelected(null);moveRef.current+=1;setMoves(moveRef.current)
+      audio.sfxPieceMove()
+      if(np.every((v,i)=>v===i)){
+        setDone(true);audio.sfxPuzzleDone()
+        const elapsed=(Date.now()-startTime.current)/1000
+        const tBonus=Math.max(0,300-elapsed*2)
+        const mBonus=Math.max(0,200-moveRef.current*12)
+        setTimeout(()=>{audio.stop();onEnd(Math.round(tBonus+mBonus+200))},1200)
+      }
+    }
+  }
+
+  // Image select screen
+  if(imgIdx===null){
+    return (
+      <div style={{position:'fixed',inset:0,background:char.bg,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:'1.2rem'}}>
+        <BackBtn onClick={()=>{activeRef.current=false;onBack()}}/>
+        <h2 style={{color:'white',fontWeight:700,fontSize:'clamp(1.2rem,5vw,1.8rem)',textAlign:'center',marginTop:'2rem'}}>
+          🧩 だれのパズルをする？
+        </h2>
+        <div style={{display:'flex',gap:'1rem',flexWrap:'wrap',justifyContent:'center'}}>
+          {PUZZLE_IMGS.map((pi,i)=>(
+            <button key={i} onPointerDown={()=>startPuzzle(i)} style={{
+              background:'rgba(255,255,255,.06)',border:`2px solid ${pi.color}55`,
+              borderRadius:20,padding:'1rem',cursor:'pointer',
+              display:'flex',flexDirection:'column',alignItems:'center',gap:'.5rem',
+              transition:'all .25s',
+            }}>
+              <div style={{width:'clamp(100px,22vw,150px)',height:'clamp(120px,26vw,180px)',borderRadius:14,overflow:'hidden',border:`2.5px solid ${pi.color}`}}>
+                <img src={pi.src} style={{width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
+              </div>
+              <div style={{color:pi.color,fontWeight:700,fontSize:'1.1rem'}}>{pi.label}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  const pimg=PUZZLE_IMGS[imgIdx]
+  const VW=Math.min(window.innerWidth-32, 480)
+  const PIECE_W=Math.floor(VW/PCOLS)
+  const PIECE_H=Math.round(PIECE_W*(3/4))
+
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,display:'flex',flexDirection:'column',alignItems:'center',overflow:'hidden'}}>
+      <BackBtn onClick={()=>{activeRef.current=false;audio.stop();onBack()}}/>
+      <div style={{paddingTop:50,paddingBottom:8,display:'flex',gap:'1.5rem',alignItems:'center',color:'white',fontSize:'.9rem'}}>
+        <span>👆 {moves}かい</span>
+        {selected!==null&&<span style={{color:'#FFD700',fontWeight:700}}>✅ えらんだ！もう1まいタップ</span>}
+      </div>
+
+      {/* Small reference image */}
+      <div style={{width:PIECE_W,height:PIECE_H,borderRadius:8,overflow:'hidden',border:`2px solid ${pimg.color}55`,marginBottom:8,opacity:.55}}>
+        <img src={pimg.src} style={{width:'100%',height:'100%',objectFit:'cover'}} draggable={false}/>
+      </div>
+
+      {/* Puzzle grid */}
+      <div style={{
+        display:'grid',gridTemplateColumns:`repeat(${PCOLS},${PIECE_W}px)`,
+        gap:4,border:`3px solid ${done?'#FFD700':pimg.color}66`,
+        borderRadius:16,overflow:'hidden',
+        animation:done?'puzzleComplete .5s ease-out':'none',
+        boxShadow:done?'0 0 40px #FFD700':undefined,
+      }}>
+        {pieces.map((origPos,curPos)=>{
+          const origRow=Math.floor(origPos/PCOLS)
+          const origCol=origPos%PCOLS
+          const isSelected=selected===curPos
+          return (
+            <div key={curPos} onPointerDown={()=>tapPiece(curPos)} style={{
+              width:PIECE_W,height:PIECE_H,
+              backgroundImage:`url(${pimg.src})`,
+              backgroundSize:`${PCOLS*100}% ${PROWS*100}%`,
+              backgroundPosition:`${PCOLS===1?0:origCol*100/(PCOLS-1)}% ${PROWS===1?0:origRow*100/(PROWS-1)}%`,
+              cursor:'pointer',
+              outline:isSelected?`4px solid white`:'none',
+              outlineOffset:'-2px',
+              filter:isSelected?'brightness(1.4) drop-shadow(0 0 8px white)':'brightness(1)',
+              transition:'filter .15s,outline .15s',
+              animation:isSelected?'pieceSelect 1s ease-in-out infinite':'none',
+            }}/>
+          )
+        })}
+      </div>
+
+      {done&&(
+        <div style={{marginTop:'1rem',color:'#FFD700',fontSize:'1.8rem',fontWeight:900,animation:'comboFlash .4s ease-in-out infinite'}}>
+          🎉 かんせい！ 🎉
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
+   MAIN APP
+═══════════════════════════════════════════════════════ */
+export default function App() {
+  const [screen,     setScreen]     = useState('title')
+  // 'title' | 'select' | 'hub' | 'game' | 'result'
+  const [char,       setChar]       = useState(null)
+  const [gameId,     setGameId]     = useState(null)
+  const [lastScore,  setLastScore]  = useState(0)
+  const [highScores, setHighScores] = useState({})
+
+  const audioRef = useRef(null)
+
+  useEffect(() => { audioRef.current = makeAudio(); return () => audioRef.current?.stop() }, [])
+
+  function selectChar(c) { setChar(c); setScreen('hub') }
+
+  function selectGame(gid) { setGameId(gid); setScreen('game') }
+
+  function gameEnd(score) {
+    setLastScore(score)
+    setHighScores(prev => ({ ...prev, [gameId]: Math.max(prev[gameId]||0, score) }))
+    setScreen('result')
+  }
+
+  function backToHub() {
+    audioRef.current?.stop()
+    setScreen('hub')
+  }
+
+  const game = GAMES.find(g => g.id === gameId)
+
+  return (
+    <>
+      {screen === 'title' && <TitleScreen onStart={() => setScreen('select')} />}
+      {screen === 'select' && <SelectScreen onSelect={selectChar} />}
+      {screen === 'hub' && char && (
+        <GameHub
+          char={char}
+          highScores={highScores}
+          onSelectGame={selectGame}
+          onBack={() => setScreen('select')}
+        />
+      )}
+      {screen === 'game' && char && gameId === 'starCatch' && (
+        <StarCatch char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'game' && char && gameId === 'memoryCards' && (
+        <MemoryCards char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'game' && char && gameId === 'bubblePop' && (
+        <BubblePop char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'game' && char && gameId === 'hideSeek' && (
+        <HideSeek char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'game' && char && gameId === 'rhythmTap' && (
+        <RhythmTap char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'game' && char && gameId === 'puzzle' && (
+        <Puzzle char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'result' && char && game && (
+        <ResultScreen
+          char={char}
+          score={lastScore}
+          highScore={highScores[gameId] || 0}
+          gameLabel={game.emoji + ' ' + game.label}
+          onReplay={() => { setScreen('game') }}
+          onHub={backToHub}
+        />
+      )}
+    </>
+  )
 }

@@ -15,45 +15,15 @@ html, body {
   font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'YuGothic', 'Yu Gothic', 'Meiryo', sans-serif;
 }
 
-@keyframes charIdle {
-  0%, 100% { transform: translateY(0px) rotate(-1.5deg); }
-  50% { transform: translateY(-10px) rotate(1.5deg); }
-}
-
-@keyframes charDance {
-  0%   { transform: translateY(0) rotate(-6deg) scale(1); }
-  20%  { transform: translateY(-22px) rotate(6deg) scale(1.06); }
-  40%  { transform: translateY(-8px) rotate(-4deg) scale(1.03); }
-  60%  { transform: translateY(-18px) rotate(4deg) scale(1.05); }
-  80%  { transform: translateY(-5px) rotate(-3deg) scale(1.02); }
-  100% { transform: translateY(0) rotate(-6deg) scale(1); }
-}
-
-@keyframes charCelebrate {
-  0%, 100% { transform: translateY(0) rotate(0deg) scale(1); }
-  25%  { transform: translateY(-30px) rotate(-10deg) scale(1.12); }
-  75%  { transform: translateY(-25px) rotate(10deg) scale(1.10); }
-}
-
-@keyframes floatUp {
-  0%   { transform: translateY(0) scale(1);   opacity: 1; }
-  60%  { transform: translateY(-50px) scale(1.1); opacity: 0.9; }
-  100% { transform: translateY(-90px) scale(0.8); opacity: 0; }
-}
-
-@keyframes confettiFall {
-  0%   { transform: translateY(-60px) rotate(0deg);   opacity: 1; }
-  100% { transform: translateY(110vh) rotate(800deg); opacity: 0.2; }
-}
-
+/* ── Shared animations ───────────────────────── */
 @keyframes titleFloat {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50%       { transform: translateY(-14px) scale(1.015); }
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
 }
 
 @keyframes titleGlow {
-  0%, 100% { filter: drop-shadow(0 0 18px rgba(192,132,252,0.9)) drop-shadow(0 0 40px rgba(192,132,252,0.4)); }
-  50%       { filter: drop-shadow(0 0 36px rgba(192,132,252,1))   drop-shadow(0 0 80px rgba(192,132,252,0.6)); }
+  0%, 100% { filter: drop-shadow(0 0 16px rgba(192,132,252,0.9)); }
+  50%       { filter: drop-shadow(0 0 36px rgba(192,132,252,1)) drop-shadow(0 0 72px rgba(192,132,252,0.5)); }
 }
 
 @keyframes btnPulse {
@@ -66,31 +36,14 @@ html, body {
   50%       { opacity: 1;   transform: scale(1.3) rotate(180deg); }
 }
 
-@keyframes itemSpin {
-  0%   { transform: rotate(-12deg) scale(1); }
-  50%  { transform: rotate(12deg) scale(1.12); }
-  100% { transform: rotate(-12deg) scale(1); }
+@keyframes floatUp {
+  0%   { transform: translateY(0) scale(1); opacity: 1; }
+  100% { transform: translateY(-90px) scale(0.7); opacity: 0; }
 }
 
-@keyframes catchBurst {
-  0%   { transform: scale(1);   opacity: 1; }
-  50%  { transform: scale(1.5); opacity: 0.8; }
-  100% { transform: scale(0);   opacity: 0; }
-}
-
-@keyframes comboFlash {
-  0%, 100% { transform: scale(1);    opacity: 1; }
-  50%       { transform: scale(1.25); opacity: 0.85; }
-}
-
-@keyframes urgentPulse {
-  0%, 100% { color: #F87171; }
-  50%       { color: #FF0000; transform: scale(1.15); }
-}
-
-@keyframes tapHint {
-  0%, 100% { transform: translateY(0) rotate(-15deg); opacity: 1; }
-  50%       { transform: translateY(12px) rotate(-15deg); opacity: 0.7; }
+@keyframes confettiFall {
+  0%   { transform: translateY(-60px) rotate(0deg);   opacity: 1; }
+  100% { transform: translateY(110vh) rotate(800deg); opacity: 0.2; }
 }
 
 @keyframes slideInUp {
@@ -98,20 +51,93 @@ html, body {
   to   { transform: translateY(0);    opacity: 1; }
 }
 
-@keyframes shimmerBg {
-  0%   { background-position: 0% 50%; }
-  50%  { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+@keyframes comboFlash {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%       { transform: scale(1.2); opacity: 0.85; }
 }
 
-@keyframes cardGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(255,255,255,0.05); }
-  50%       { box-shadow: 0 0 40px rgba(255,255,255,0.15); }
+@keyframes urgentPulse {
+  0%, 100% { color: #F87171; }
+  50%       { color: #FF0000; transform: scale(1.15); }
 }
 
-@keyframes milestonePop {
-  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-  50%  { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
-  80%  { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
-  100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+/* ── Star catch ───────────────────────────────── */
+@keyframes itemSpin {
+  0%   { transform: rotate(-12deg) scale(1); }
+  50%  { transform: rotate(12deg) scale(1.12); }
+  100% { transform: rotate(-12deg) scale(1); }
+}
+
+/* ── Memory cards ─────────────────────────────── */
+@keyframes cardIn {
+  from { transform: rotateY(90deg); opacity: 0; }
+  to   { transform: rotateY(0deg);  opacity: 1; }
+}
+
+@keyframes cardMatch {
+  0%   { transform: scale(1);    box-shadow: none; }
+  40%  { transform: scale(1.12); box-shadow: 0 0 32px gold; }
+  100% { transform: scale(1);    box-shadow: 0 0 16px gold; }
+}
+
+/* ── Bubble pop ───────────────────────────────── */
+@keyframes bubblePop {
+  0%   { transform: scale(1);   opacity: 1; }
+  50%  { transform: scale(1.5); opacity: 0.7; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+
+@keyframes bubbleWobble {
+  0%, 100% { transform: scale(1) rotate(-2deg); }
+  50%       { transform: scale(1.05) rotate(2deg); }
+}
+
+/* ── Hide & seek ──────────────────────────────── */
+@keyframes peekOut {
+  from { transform: translateX(-50%) translateY(40px) scale(0.8); opacity: 0; }
+  to   { transform: translateX(-50%) translateY(0)    scale(1);   opacity: 1; }
+}
+
+@keyframes hidePop {
+  0%   { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(0);   opacity: 0; }
+}
+
+@keyframes hideSpotGlow {
+  0%, 100% { filter: brightness(1) drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
+  50%       { filter: brightness(1.3) drop-shadow(0 0 20px rgba(255,255,255,0.5)); }
+}
+
+/* ── Rhythm tap ───────────────────────────────── */
+@keyframes notefall {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100vh); }
+}
+
+@keyframes hitFlash {
+  0%   { background: rgba(255,255,255,0.6); }
+  100% { background: transparent; }
+}
+
+@keyframes feedbackPop {
+  0%   { transform: translateX(-50%) scale(0.6); opacity: 1; }
+  60%  { transform: translateX(-50%) scale(1.2); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1);   opacity: 0; }
+}
+
+/* ── Puzzle ───────────────────────────────────── */
+@keyframes pieceSelect {
+  0%, 100% { filter: brightness(1.4) drop-shadow(0 0 8px white); }
+  50%       { filter: brightness(1.8) drop-shadow(0 0 16px white); }
+}
+
+@keyframes pieceCorrect {
+  0%   { transform: scale(1.1); filter: brightness(1.5); }
+  100% { transform: scale(1);   filter: brightness(1); }
+}
+
+@keyframes puzzleComplete {
+  0%   { transform: scale(1);    filter: brightness(1); }
+  50%  { transform: scale(1.05); filter: brightness(1.3) drop-shadow(0 0 24px gold); }
+  100% { transform: scale(1);    filter: brightness(1.1); }
 }
