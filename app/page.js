@@ -56,12 +56,13 @@ const CHARS = [
    GAME CATALOGUE
 ═══════════════════════════════════════════════════════ */
 const GAMES = [
-  { id: 'starCatch',   label: 'スターキャッチ', emoji: '⭐', desc: '落ちてくる星をタップ！' },
-  { id: 'memoryCards', label: 'メモリーカード', emoji: '🃏', desc: 'おなじ写真をさがそう！' },
-  { id: 'bubblePop',   label: 'バブルポップ',   emoji: '🫧', desc: 'うかぶバブルをはじこう！' },
-  { id: 'hideSeek',    label: 'かくれんぼ',     emoji: '👀', desc: 'でてきたらすぐタップ！' },
-  { id: 'rhythmTap',   label: 'リズムタップ',   emoji: '🎵', desc: 'おんぷがきたらタップ！' },
-  { id: 'puzzle',      label: 'パズル',         emoji: '🧩', desc: 'しゃしんをあわせよう！' },
+  { id: 'starCatch',    label: 'スターキャッチ',   emoji: '⭐', desc: '落ちてくる星をタップ！' },
+  { id: 'memoryCards',  label: 'メモリーカード',   emoji: '🃏', desc: 'おなじ写真をさがそう！' },
+  { id: 'bubblePop',    label: 'バブルポップ',     emoji: '🫧', desc: 'うかぶバブルをはじこう！' },
+  { id: 'hideSeek',     label: 'かくれんぼ',       emoji: '👀', desc: 'でてきたらすぐタップ！' },
+  { id: 'rhythmTap',    label: 'リズムタップ',     emoji: '🎵', desc: 'おんぷがきたらタップ！' },
+  { id: 'puzzle',       label: 'パズル',           emoji: '🧩', desc: 'しゃしんをあわせよう！' },
+  { id: 'demonShoot',   label: 'デーモンシュート', emoji: '🗡️', desc: 'デーモンをたおせ！' },
 ]
 
 const DROP_ITEMS = [
@@ -89,45 +90,21 @@ function shuffle(arr) {
 }
 
 /* ═══════════════════════════════════════════════════════
-   AUDIO ENGINE
+   AUDIO ENGINE — BGM: YouTube (Huntrix "Golden") + SFX: Web Audio
 ═══════════════════════════════════════════════════════ */
-function makeAudio() {
-  let ctx = null, master = null, running = false
-  let schedTimer = null, nextBeat = 0, beatIdx = 0
-  const MELODY = [659.25,783.99,880,783.99,659.25,587.33,523.25,659.25,783.99,880,1046.5,880,783.99,659.25,523.25,0]
+// YouTube video IDs for Huntrix / KPop Demon Hunters OST
+const YT_PLAYLIST = ['-JStINmfSbk', 'AzCAwdp1uIQ']
+
+function makeAudio(getYtPlayer) {
+  let ctx = null, master = null
 
   function init() {
     if (ctx) return
     ctx = new (window.AudioContext || window.webkitAudioContext)()
     master = ctx.createGain(); master.gain.value = 0.38; master.connect(ctx.destination)
   }
-  function kick(t) {
-    const o=ctx.createOscillator(),g=ctx.createGain()
-    o.connect(g);g.connect(master)
-    o.frequency.setValueAtTime(125,t);o.frequency.exponentialRampToValueAtTime(36,t+.18)
-    g.gain.setValueAtTime(.95,t);g.gain.exponentialRampToValueAtTime(.001,t+.32)
-    o.start(t);o.stop(t+.32)
-  }
-  function snare(t) {
-    const sz=Math.ceil(ctx.sampleRate*.16),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0)
-    for(let i=0;i<sz;i++)d[i]=(Math.random()*2-1)*.26
-    const s=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter()
-    f.type='highpass';f.frequency.value=1400;s.buffer=buf
-    s.connect(f);f.connect(g);g.connect(master)
-    g.gain.setValueAtTime(.62,t);g.gain.exponentialRampToValueAtTime(.001,t+.16)
-    s.start(t);s.stop(t+.16)
-  }
-  function hat(t) {
-    const sz=Math.ceil(ctx.sampleRate*.048),buf=ctx.createBuffer(1,sz,ctx.sampleRate),d=buf.getChannelData(0)
-    for(let i=0;i<sz;i++)d[i]=Math.random()*2-1
-    const s=ctx.createBufferSource(),g=ctx.createGain(),f=ctx.createBiquadFilter()
-    f.type='highpass';f.frequency.value=9000;s.buffer=buf
-    s.connect(f);f.connect(g);g.connect(master)
-    g.gain.setValueAtTime(.18,t);g.gain.exponentialRampToValueAtTime(.001,t+.048)
-    s.start(t);s.stop(t+.048)
-  }
   function tone(t,freq,dur,vol=.2) {
-    if(!freq)return
+    if(!freq||!ctx)return
     const o=ctx.createOscillator(),g=ctx.createGain()
     o.type='sine';o.connect(g);g.connect(master)
     o.frequency.value=freq
@@ -135,24 +112,25 @@ function makeAudio() {
     g.gain.setValueAtTime(vol,t+dur*.82);g.gain.linearRampToValueAtTime(.001,t+dur)
     o.start(t);o.stop(t+dur)
   }
-  const PAT=[['K','H'],['H'],['H'],['H'],['S','H'],['H'],['H'],['H'],['K','H'],['H'],['H'],['H'],['S','H'],['H'],['K','H'],['H']]
-  function schedule() {
-    if(!ctx||!running)return
-    const s16=(60/128)/4,q=s16*4
-    while(nextBeat<ctx.currentTime+.1){
-      PAT[beatIdx%16].forEach(x=>{if(x==='K')kick(nextBeat);else if(x==='S')snare(nextBeat);else hat(nextBeat)})
-      if(beatIdx%4===0)tone(nextBeat,MELODY[Math.floor(beatIdx/4)%MELODY.length],q*.88)
-      beatIdx++;nextBeat+=s16
-    }
-  }
   function sfx(freqs,durs,vols) {
     if(!ctx||ctx.state!=='running')return
     const t=ctx.currentTime
     freqs.forEach((f,i)=>tone(t+(durs[i]||0),f,.18+(durs[i]||0),vols?vols[i]:.4))
   }
+  function ytPlay() {
+    try {
+      const p=getYtPlayer?.()
+      if(!p||!p.playVideo)return
+      p.setVolume(38)
+      if(p.getPlayerState&&p.getPlayerState()!==1)p.playVideo()
+    } catch(e){}
+  }
+  function ytStop() {
+    try { const p=getYtPlayer?.(); if(p?.stopVideo)p.stopVideo() } catch(e){}
+  }
   return {
-    start(){init();if(ctx.state==='suspended')ctx.resume();if(running)return;running=true;beatIdx=0;nextBeat=ctx.currentTime+.05;schedTimer=setInterval(()=>{if(running)schedule()},20)},
-    stop(){running=false;clearInterval(schedTimer);schedTimer=null;ctx?.suspend()},
+    start(){init();if(ctx.state==='suspended')ctx.resume();ytPlay()},
+    stop(){ytStop();ctx?.suspend()},
     resume(){ctx?.state==='suspended'&&ctx.resume()},
     sfxCatch(){ sfx([880,1760],[0,.1]) },
     sfxCombo(){ sfx([880,1046.5,1318.5],[0,.09,.18]) },
@@ -167,6 +145,7 @@ function makeAudio() {
     sfxRhythmMiss(){ sfx([220,180],[0,.12],[.2,.2]) },
     sfxPieceMove(){ sfx([600],[0],[.3]) },
     sfxPuzzleDone(){ sfx([523.25,659.25,783.99,880,1046.5],[0,.08,.16,.24,.32],[.35,.35,.35,.35,.4]) },
+    sfxHit(){ sfx([160,110],[0,.1],[.5,.5]) },
   }
 }
 
@@ -1230,6 +1209,150 @@ function Puzzle({ char, audio, onEnd, onBack }) {
 }
 
 /* ═══════════════════════════════════════════════════════
+   GAME 7: デーモンシュート
+═══════════════════════════════════════════════════════ */
+const DEMONS = [
+  { emoji:'👹', pts:15, glow:'#FF4500' },
+  { emoji:'💀', pts:15, glow:'#9CA3AF' },
+  { emoji:'😈', pts:20, glow:'#8B5CF6' },
+  { emoji:'🧟', pts:15, glow:'#4ADE80' },
+  { emoji:'🦇', pts:10, glow:'#6B7280' },
+  { emoji:'🔮', pts:25, glow:'#7C3AED' },
+  { emoji:'🕷️', pts:10, glow:'#374151' },
+]
+const CHAR_DROPS = [
+  { src:IMG.rumi.profile,     color:'#C084FC' },
+  { src:IMG.mira.profile,     color:'#FB7185' },
+  { src:IMG.zoey.profile,     color:'#38BDF8' },
+  { src:IMG.rumi.sword,       color:'#C084FC' },
+  { src:IMG.mira.dance,       color:'#FB7185' },
+  { src:IMG.zoey.stage,       color:'#38BDF8' },
+]
+
+function DemonShoot({ char, audio, onEnd, onBack }) {
+  const [score,     setScore]     = useState(0)
+  const [timeLeft,  setTimeLeft]  = useState(60)
+  const [items,     setItems]     = useState([])
+  const [combo,     setCombo]     = useState(0)
+  const [particles, setParticles] = useState([])
+  const [danger,    setDanger]    = useState(false)
+  const [showHint,  setShowHint]  = useState(true)
+
+  const scoreRef=useRef(0),comboRef=useRef(0),timeRef=useRef(60)
+  const itemsRef=useRef([]),nextId=useRef(0)
+  const rafRef=useRef(null),timerRef=useRef(null),spawnRef=useRef(null)
+  const activeRef=useRef(true)
+
+  const endGame=useCallback(()=>{
+    if(!activeRef.current)return
+    activeRef.current=false;audio.stop()
+    cancelAnimationFrame(rafRef.current);clearTimeout(spawnRef.current);clearInterval(timerRef.current)
+    setTimeout(()=>{audio.sfxGameOver();onEnd(scoreRef.current)},80)
+  },[audio,onEnd])
+
+  useEffect(()=>{
+    setTimeout(()=>setShowHint(false),3500)
+    audio.start()
+    const H=window.innerHeight
+    function loop(){
+      if(!activeRef.current)return
+      itemsRef.current=itemsRef.current.map(i=>({...i,y:i.y+i.speed})).filter(i=>i.y<H+100)
+      setItems([...itemsRef.current]);rafRef.current=requestAnimationFrame(loop)
+    }
+    rafRef.current=requestAnimationFrame(loop)
+    timerRef.current=setInterval(()=>{
+      const n=timeRef.current-1;timeRef.current=n;setTimeLeft(n)
+      if(n<=0){clearInterval(timerRef.current);endGame()}
+    },1000)
+    function spawn(){
+      if(!activeRef.current)return
+      const prog=1-timeRef.current/60
+      const rate=Math.max(480,1250-prog*770)
+      const W=window.innerWidth
+      if(Math.random()<0.68){
+        const d=DEMONS[Math.floor(Math.random()*DEMONS.length)]
+        const sz=62+Math.random()*18
+        itemsRef.current=[...itemsRef.current,{
+          id:nextId.current++,type:'demon',
+          x:Math.max(0,Math.random()*(W-sz-8)),y:-sz-10,size:sz,
+          emoji:d.emoji,pts:d.pts,glow:d.glow,
+          speed:1.5+prog*2.3+Math.random()*0.4,
+        }]
+      } else {
+        const c=CHAR_DROPS[Math.floor(Math.random()*CHAR_DROPS.length)]
+        const sz=68+Math.random()*14
+        itemsRef.current=[...itemsRef.current,{
+          id:nextId.current++,type:'char',
+          x:Math.max(0,Math.random()*(W-sz-8)),y:-sz-10,size:sz,
+          src:c.src,color:c.color,pts:0,
+          speed:1.2+prog*1.4+Math.random()*0.3,
+        }]
+      }
+      spawnRef.current=setTimeout(spawn,rate)
+    }
+    spawnRef.current=setTimeout(spawn,600)
+    return()=>{activeRef.current=false;cancelAnimationFrame(rafRef.current);clearTimeout(spawnRef.current);clearInterval(timerRef.current)}
+  },[audio,endGame])
+
+  const tapItem=useCallback((id,type,pts,cx,cy,glow)=>{
+    if(!itemsRef.current.find(i=>i.id===id))return
+    itemsRef.current=itemsRef.current.filter(i=>i.id!==id)
+    setItems([...itemsRef.current])
+    if(type==='demon'){
+      const nc=comboRef.current+1;comboRef.current=nc;setCombo(nc)
+      const mult=nc>=5?3:nc>=3?2:1;const earned=pts*mult
+      scoreRef.current+=earned;setScore(scoreRef.current)
+      const pid=Date.now()+Math.random()
+      setParticles(p=>[...p,{id:pid,x:cx,y:cy,text:nc>=3?`+${earned} コンボ！！`:`+${earned}`,color:nc>=3?'#FFD700':glow,big:nc>=3}])
+      setTimeout(()=>setParticles(p=>p.filter(x=>x.id!==pid)),900)
+      if(nc>=3)audio.sfxCombo();else audio.sfxCatch()
+    } else {
+      comboRef.current=0;setCombo(0)
+      scoreRef.current=Math.max(0,scoreRef.current-20);setScore(scoreRef.current)
+      const pid=Date.now()+Math.random()
+      setParticles(p=>[...p,{id:pid,x:cx,y:cy,text:'-20 まちがい！',color:'#F87171',big:false}])
+      setTimeout(()=>setParticles(p=>p.filter(x=>x.id!==pid)),900)
+      setDanger(true);setTimeout(()=>setDanger(false),500)
+      audio.sfxHit()
+    }
+  },[audio])
+
+  return (
+    <div style={{position:'fixed',inset:0,background:char.bg,overflow:'hidden'}}>
+      {danger&&<div style={{position:'fixed',inset:0,background:'rgba(220,38,38,.35)',zIndex:100,pointerEvents:'none',animation:'dangerFlash .5s ease-out forwards'}}/>}
+      <BackBtn onClick={()=>{activeRef.current=false;audio.stop();onBack()}}/>
+      <HUD char={char} score={score} timeLeft={timeLeft} combo={combo} urgent={timeLeft<=10}/>
+      <div style={{position:'absolute',top:0,left:0,right:0,height:4,background:'rgba(255,255,255,.1)',zIndex:30}}>
+        <div style={{width:`${(timeLeft/60)*100}%`,height:'100%',background:timeLeft<=10?'#F87171':'#FF4500',transition:'width 1s linear',boxShadow:'0 0 10px #FF4500'}}/>
+      </div>
+      {showHint&&(
+        <div style={{position:'absolute',top:'42%',left:'50%',transform:'translate(-50%,-50%)',color:'white',fontSize:'clamp(1rem,3.8vw,1.6rem)',fontWeight:900,textAlign:'center',pointerEvents:'none',zIndex:25,lineHeight:1.6,animation:'comboFlash .6s ease-in-out infinite',textShadow:`0 0 20px ${char.color}`}}>
+          👹 デーモンをたおせ！<br/><span style={{fontSize:'.8em',color:'#FCA5A5'}}>⚠️ キャラクターはタップしないで！</span>
+        </div>
+      )}
+      {items.map(item=>(
+        <div key={item.id} onPointerDown={e=>{e.stopPropagation();tapItem(item.id,item.type,item.pts,e.clientX,e.clientY,item.type==='demon'?item.glow:item.color)}}
+          style={{position:'absolute',left:item.x,top:item.y,width:item.size,height:item.size,cursor:'pointer',touchAction:'none',userSelect:'none',zIndex:10}}>
+          {item.type==='demon'?(
+            <div style={{width:'100%',height:'100%',fontSize:`${item.size*.75}px`,lineHeight:`${item.size}px`,textAlign:'center',filter:`drop-shadow(0 0 12px ${item.glow})`,animation:'itemSpin 1.2s ease-in-out infinite'}}>
+              {item.emoji}
+            </div>
+          ):(
+            <div style={{width:'100%',height:'100%',borderRadius:'50%',overflow:'hidden',border:`3px solid ${item.color}`,boxShadow:`0 0 18px ${item.color}88`,animation:'bubbleWobble 1.5s ease-in-out infinite'}}>
+              <img src={item.src} style={{width:'100%',height:'100%',objectFit:'cover',objectPosition:'top'}} draggable={false}/>
+            </div>
+          )}
+        </div>
+      ))}
+      {particles.map(p=><ScoreParticle key={p.id} p={p}/>)}
+      <div style={{position:'absolute',bottom:0,left:'50%',transform:'translateX(-50%)',zIndex:5,filter:`drop-shadow(0 0 20px ${char.color}88)`}}>
+        <img src={char.img.demon||char.img.performance||char.img.profile} style={{width:'clamp(80px,18vw,130px)',height:'clamp(90px,22vw,160px)',objectFit:'cover',objectPosition:'top',borderRadius:'12px 12px 0 0'}} draggable={false}/>
+      </div>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════════════
    MAIN APP
 ═══════════════════════════════════════════════════════ */
 export default function App() {
@@ -1240,9 +1363,26 @@ export default function App() {
   const [lastScore,  setLastScore]  = useState(0)
   const [highScores, setHighScores] = useState({})
 
-  const audioRef = useRef(null)
+  const audioRef    = useRef(null)
+  const ytPlayerRef = useRef(null)
+  const ytReadyRef  = useRef(false)
 
-  useEffect(() => { audioRef.current = makeAudio(); return () => audioRef.current?.stop() }, [])
+  useEffect(() => {
+    // Load YouTube IFrame API for Huntrix / KPop Demon Hunters OST
+    const tag = document.createElement('script')
+    tag.src = 'https://www.youtube.com/iframe_api'
+    document.head.appendChild(tag)
+    window.onYouTubeIframeAPIReady = () => {
+      ytPlayerRef.current = new window.YT.Player('yt-audio', {
+        height: '1', width: '1',
+        videoId: YT_PLAYLIST[0],
+        playerVars: { autoplay: 0, controls: 0, loop: 1, playlist: YT_PLAYLIST.join(',') },
+        events: { onReady: () => { ytReadyRef.current = true } },
+      })
+    }
+    audioRef.current = makeAudio(() => ytReadyRef.current ? ytPlayerRef.current : null)
+    return () => audioRef.current?.stop()
+  }, [])
 
   function selectChar(c) { setChar(c); setScreen('hub') }
 
@@ -1263,6 +1403,8 @@ export default function App() {
 
   return (
     <>
+      {/* Hidden YouTube audio player for Huntrix OST */}
+      <div id="yt-audio" style={{position:'fixed',width:1,height:1,bottom:-10,left:-10,opacity:0,pointerEvents:'none'}}/>
       {screen === 'title' && <TitleScreen onStart={() => setScreen('select')} />}
       {screen === 'select' && <SelectScreen onSelect={selectChar} />}
       {screen === 'hub' && char && (
@@ -1290,6 +1432,9 @@ export default function App() {
       )}
       {screen === 'game' && char && gameId === 'puzzle' && (
         <Puzzle char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
+      )}
+      {screen === 'game' && char && gameId === 'demonShoot' && (
+        <DemonShoot char={char} audio={audioRef.current} onEnd={gameEnd} onBack={backToHub} />
       )}
       {screen === 'result' && char && game && (
         <ResultScreen

@@ -1,143 +1,44 @@
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  touch-action: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  font-family: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'YuGothic', 'Yu Gothic', 'Meiryo', sans-serif;
+  width: 100%; height: 100%; overflow: hidden;
+  touch-action: none; user-select: none;
+  -webkit-user-select: none; -webkit-tap-highlight-color: transparent;
+  font-family: 'Hiragino Kaku Gothic ProN','Hiragino Sans','YuGothic','Meiryo',sans-serif;
 }
 
-/* ── Shared animations ───────────────────────── */
-@keyframes titleFloat {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
-}
-
-@keyframes titleGlow {
-  0%, 100% { filter: drop-shadow(0 0 16px rgba(192,132,252,0.9)); }
-  50%       { filter: drop-shadow(0 0 36px rgba(192,132,252,1)) drop-shadow(0 0 72px rgba(192,132,252,0.5)); }
-}
-
-@keyframes btnPulse {
-  0%, 100% { transform: scale(1);    box-shadow: 0 8px 32px rgba(192,132,252,0.45); }
-  50%       { transform: scale(1.06); box-shadow: 0 14px 56px rgba(192,132,252,0.75); }
-}
-
-@keyframes starTwinkle {
-  0%, 100% { opacity: 0.2; transform: scale(0.7) rotate(0deg); }
-  50%       { opacity: 1;   transform: scale(1.3) rotate(180deg); }
-}
-
-@keyframes floatUp {
-  0%   { transform: translateY(0) scale(1); opacity: 1; }
-  100% { transform: translateY(-90px) scale(0.7); opacity: 0; }
-}
-
-@keyframes confettiFall {
-  0%   { transform: translateY(-60px) rotate(0deg);   opacity: 1; }
-  100% { transform: translateY(110vh) rotate(800deg); opacity: 0.2; }
-}
-
-@keyframes slideInUp {
-  from { transform: translateY(40px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-
-@keyframes comboFlash {
-  0%, 100% { transform: scale(1);    opacity: 1; }
-  50%       { transform: scale(1.2); opacity: 0.85; }
-}
-
-@keyframes urgentPulse {
-  0%, 100% { color: #F87171; }
-  50%       { color: #FF0000; transform: scale(1.15); }
-}
-
-/* ── Star catch ───────────────────────────────── */
-@keyframes itemSpin {
-  0%   { transform: rotate(-12deg) scale(1); }
-  50%  { transform: rotate(12deg) scale(1.12); }
-  100% { transform: rotate(-12deg) scale(1); }
-}
-
-/* ── Memory cards ─────────────────────────────── */
-@keyframes cardIn {
-  from { transform: rotateY(90deg); opacity: 0; }
-  to   { transform: rotateY(0deg);  opacity: 1; }
-}
-
-@keyframes cardMatch {
-  0%   { transform: scale(1);    box-shadow: none; }
-  40%  { transform: scale(1.12); box-shadow: 0 0 32px gold; }
-  100% { transform: scale(1);    box-shadow: 0 0 16px gold; }
-}
-
-/* ── Bubble pop ───────────────────────────────── */
-@keyframes bubblePop {
-  0%   { transform: scale(1);   opacity: 1; }
-  50%  { transform: scale(1.5); opacity: 0.7; }
-  100% { transform: scale(0);   opacity: 0; }
-}
-
-@keyframes bubbleWobble {
-  0%, 100% { transform: scale(1) rotate(-2deg); }
-  50%       { transform: scale(1.05) rotate(2deg); }
-}
-
-/* ── Hide & seek ──────────────────────────────── */
-@keyframes peekOut {
-  from { transform: translateX(-50%) translateY(40px) scale(0.8); opacity: 0; }
-  to   { transform: translateX(-50%) translateY(0)    scale(1);   opacity: 1; }
-}
-
-@keyframes hidePop {
-  0%   { transform: scale(1.2); opacity: 1; }
-  100% { transform: scale(0);   opacity: 0; }
-}
-
-@keyframes hideSpotGlow {
-  0%, 100% { filter: brightness(1) drop-shadow(0 0 8px rgba(255,255,255,0.2)); }
-  50%       { filter: brightness(1.3) drop-shadow(0 0 20px rgba(255,255,255,0.5)); }
-}
-
-/* ── Rhythm tap ───────────────────────────────── */
-@keyframes notefall {
-  from { transform: translateY(0); }
-  to   { transform: translateY(100vh); }
-}
-
-@keyframes hitFlash {
-  0%   { background: rgba(255,255,255,0.6); }
-  100% { background: transparent; }
-}
-
-@keyframes feedbackPop {
-  0%   { transform: translateX(-50%) scale(0.6); opacity: 1; }
-  60%  { transform: translateX(-50%) scale(1.2); opacity: 1; }
-  100% { transform: translateX(-50%) scale(1);   opacity: 0; }
-}
-
-/* ── Puzzle ───────────────────────────────────── */
-@keyframes pieceSelect {
-  0%, 100% { filter: brightness(1.4) drop-shadow(0 0 8px white); }
-  50%       { filter: brightness(1.8) drop-shadow(0 0 16px white); }
-}
-
-@keyframes pieceCorrect {
-  0%   { transform: scale(1.1); filter: brightness(1.5); }
-  100% { transform: scale(1);   filter: brightness(1); }
-}
-
-@keyframes puzzleComplete {
-  0%   { transform: scale(1);    filter: brightness(1); }
-  50%  { transform: scale(1.05); filter: brightness(1.3) drop-shadow(0 0 24px gold); }
-  100% { transform: scale(1);    filter: brightness(1.1); }
-}
+@keyframes titleFloat  { 0%,100%{transform:translateY(0)}       50%{transform:translateY(-12px)} }
+@keyframes titleGlow   { 0%,100%{filter:drop-shadow(0 0 16px rgba(192,132,252,.9))} 50%{filter:drop-shadow(0 0 36px rgba(192,132,252,1)) drop-shadow(0 0 72px rgba(192,132,252,.5))} }
+@keyframes btnPulse    { 0%,100%{transform:scale(1);   box-shadow:0 8px 32px rgba(192,132,252,.45)} 50%{transform:scale(1.06);box-shadow:0 14px 56px rgba(192,132,252,.75)} }
+@keyframes starTwinkle { 0%,100%{opacity:.2;transform:scale(.7) rotate(0deg)}   50%{opacity:1;transform:scale(1.3) rotate(180deg)} }
+@keyframes floatUp     { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-90px) scale(.7);opacity:0} }
+@keyframes confettiFall{ 0%{transform:translateY(-60px) rotate(0deg);opacity:1} 100%{transform:translateY(110vh) rotate(800deg);opacity:.2} }
+@keyframes slideInUp   { from{transform:translateY(40px);opacity:0} to{transform:translateY(0);opacity:1} }
+@keyframes comboFlash  { 0%,100%{transform:scale(1);opacity:1}   50%{transform:scale(1.2);opacity:.85} }
+@keyframes urgentPulse { 0%,100%{color:#F87171} 50%{color:#FF0000;transform:scale(1.15)} }
+@keyframes itemSpin    { 0%{transform:rotate(-12deg) scale(1)} 50%{transform:rotate(12deg) scale(1.12)} 100%{transform:rotate(-12deg) scale(1)} }
+@keyframes cardIn      { from{transform:rotateY(90deg);opacity:0} to{transform:rotateY(0deg);opacity:1} }
+@keyframes cardMatch   { 0%{transform:scale(1);box-shadow:none} 40%{transform:scale(1.12);box-shadow:0 0 32px gold} 100%{transform:scale(1);box-shadow:0 0 16px gold} }
+@keyframes bubblePop   { 0%{transform:scale(1);opacity:1} 50%{transform:scale(1.5);opacity:.7} 100%{transform:scale(0);opacity:0} }
+@keyframes bubbleWobble{ 0%,100%{transform:scale(1) rotate(-2deg)} 50%{transform:scale(1.05) rotate(2deg)} }
+@keyframes peekOut     { from{transform:translateX(-50%) translateY(40px) scale(.8);opacity:0} to{transform:translateX(-50%) translateY(0) scale(1);opacity:1} }
+@keyframes hidePop     { 0%{transform:scale(1.2);opacity:1} 100%{transform:scale(0);opacity:0} }
+@keyframes hideSpotGlow{ 0%,100%{filter:brightness(1) drop-shadow(0 0 8px rgba(255,255,255,.2))} 50%{filter:brightness(1.3) drop-shadow(0 0 20px rgba(255,255,255,.5))} }
+@keyframes feedbackPop { 0%{transform:translateX(-50%) scale(.6);opacity:1} 60%{transform:translateX(-50%) scale(1.2);opacity:1} 100%{transform:translateX(-50%) scale(1);opacity:0} }
+@keyframes pieceSelect { 0%,100%{filter:brightness(1.4) drop-shadow(0 0 8px white)} 50%{filter:brightness(1.8) drop-shadow(0 0 16px white)} }
+@keyframes puzzleComplete{ 0%{transform:scale(1);filter:brightness(1)} 50%{transform:scale(1.05);filter:brightness(1.3) drop-shadow(0 0 24px gold)} 100%{transform:scale(1);filter:brightness(1.1)} }
+@keyframes simonFlash  { 0%,100%{opacity:1;transform:scale(1)}   50%{opacity:.4;transform:scale(.95)} }
+@keyframes simonLit    { 0%,100%{transform:scale(1)}             50%{transform:scale(1.08)} }
+@keyframes reveal      { from{filter:brightness(0) saturate(0)} to{filter:brightness(1) saturate(1)} }
+@keyframes handIn      { from{transform:translate(-50%,-50%) scale(0) rotate(-20deg);opacity:0} to{transform:translate(-50%,-50%) scale(1) rotate(0deg);opacity:1} }
+@keyframes handOut     { from{transform:translate(-50%,-50%) scale(1);opacity:1} to{transform:translate(-50%,-50%) scale(0);opacity:0} }
+@keyframes photoFall   { 0%{transform:rotate(-3deg)} 50%{transform:rotate(3deg)} 100%{transform:rotate(-3deg)} }
+@keyframes snapFlash   { 0%,100%{background:rgba(255,215,0,.2)} 50%{background:rgba(255,215,0,.6)} }
+@keyframes mimicBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+@keyframes danceLight  { 0%,100%{opacity:.3;transform:scale(1)}  50%{opacity:1;transform:scale(1.06)} }
+@keyframes danceLit    { 0%,100%{opacity:1;transform:scale(1.1)} }
+@keyframes sparkleAnim { 0%{transform:scale(1);opacity:1} 100%{transform:scale(2.5);opacity:0} }
+@keyframes slotSpin    { 0%{transform:translateY(0)} 100%{transform:translateY(-33.33%)} }
+@keyframes jankenReveal{ from{transform:scale(0) rotate(-30deg);opacity:0} to{transform:scale(1) rotate(0deg);opacity:1} }
+@keyframes winFlash    { 0%,100%{background:rgba(255,215,0,.15)} 50%{background:rgba(255,215,0,.45)} }
+@keyframes popScore    { 0%{transform:translateY(0) scale(1.3);opacity:1} 100%{transform:translateY(-60px) scale(1);opacity:0} }
+@keyframes dangerFlash { 0%{opacity:.7} 100%{opacity:0} }
